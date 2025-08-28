@@ -1,7 +1,9 @@
-# UVI Refactoring Plan
+# UVI Unified Corpus Package Development Plan
 
 ## Overview
-This document outlines the refactoring plan to extract app-independent functionality from `uvi_web/uvi_flask.py` into a standalone `UVI` class in `src/uvi/UVI.py`. The goal is to create a reusable, non-web library that provides local functionality while maintaining the existing Flask application structure.
+This document outlines the development plan for a comprehensive standalone UVI (Unified Verb Index) package in `src/uvi/` that provides unified access to all nine linguistic corpora with cross-resource integration capabilities. The package leverages the shared semantic frameworks, universal interface patterns, and cross-corpus validation systems documented in `corpora/OVERVIEW.md`. 
+
+**Important**: This package is designed as a standalone library and will NOT be integrated with the existing Flask web application. The `uvi_web/` directory and all web application files remain unchanged and independent.
 
 ## 1. API Documentation for UVI Class
 
@@ -10,107 +12,266 @@ This document outlines the refactoring plan to extract app-independent functiona
 ```python
 class UVI:
     """
-    A standalone class providing VerbNet, FrameNet, PropBank, and OntoNotes 
-    unified interface functionality without web dependencies.
+    Unified Verb Index: A comprehensive standalone class providing integrated access 
+    to all nine linguistic corpora (VerbNet, FrameNet, PropBank, OntoNotes, WordNet,
+    BSO, SemNet, Reference Docs, VN API) with cross-resource navigation, semantic 
+    validation, and hierarchical analysis capabilities.
+    
+    This class implements the universal interface patterns and shared semantic 
+    frameworks documented in corpora/OVERVIEW.md, enabling seamless cross-corpus
+    integration and validation.
     """
     
-    def __init__(self, db_name='new_corpora', mongo_uri='mongodb://localhost:27017/'):
+    def __init__(self, corpora_path='corpora/', db_name='new_corpora', 
+                 mongo_uri='mongodb://localhost:27017/', load_all=True):
         """
-        Initialize UVI with MongoDB connection.
+        Initialize UVI with corpus data and optional MongoDB connection.
         
         Args:
-            db_name (str): Name of the MongoDB database
-            mongo_uri (str): MongoDB connection URI
+            corpora_path (str): Path to the corpora directory
+            db_name (str): Name of the MongoDB database (optional)
+            mongo_uri (str): MongoDB connection URI (optional)  
+            load_all (bool): Load all corpora on initialization
         """
 ```
 
 ### Core Methods
 
-#### Search and Query Methods
+#### Universal Search and Query Methods
 
 ```python
-def search_lemmas(self, lemmas, incl_vn=True, incl_fn=True, incl_pb=True, 
-                  incl_on=True, logic='or', sort_behavior='alpha'):
+def search_lemmas(self, lemmas, include_resources=None, logic='or', sort_behavior='alpha'):
     """
-    Search for lemmas across multiple linguistic resources.
+    Search for lemmas across all linguistic resources with cross-corpus integration.
     
     Args:
         lemmas (list): List of lemmas to search
-        incl_vn (bool): Include VerbNet results
-        incl_fn (bool): Include FrameNet results  
-        incl_pb (bool): Include PropBank results
-        incl_on (bool): Include OntoNotes results
+        include_resources (list): Resources to include ['vn', 'fn', 'pb', 'on', 'wn', 'bso', 'semnet', 'ref', 'vn_api']
+                                 If None, includes all available resources
         logic (str): 'and' or 'or' logic for multi-lemma search
         sort_behavior (str): 'alpha' or 'num' sorting
         
     Returns:
-        dict: Matched IDs by resource type
+        dict: Comprehensive cross-resource results with mappings
     """
 
-def search_by_attribute(self, attribute_type, query_string):
+def search_by_semantic_pattern(self, pattern_type, pattern_value, target_resources=None):
     """
-    Search VerbNet by specific attribute.
+    Search across corpora using shared semantic patterns (thematic roles, predicates, etc.).
     
     Args:
-        attribute_type (str): Type of attribute ('themrole', 'predicate', 
-                             'vs_feature', 'selrestr', 'synrestr')
-        query_string (str): Attribute value to search
+        pattern_type (str): Type of pattern ('themrole', 'predicate', 'syntactic_frame', 
+                           'selectional_restriction', 'semantic_type', 'frame_element')
+        pattern_value (str): Pattern value to search
+        target_resources (list): Resources to search in (default: all)
         
     Returns:
-        dict: Matched VerbNet class IDs
+        dict: Cross-corpus matches with semantic relationships
     """
 
-def get_verbnet_class(self, class_id):
+def search_by_cross_reference(self, source_id, source_corpus, target_corpus):
     """
-    Retrieve VerbNet class information.
+    Navigate between corpora using cross-reference mappings.
+    
+    Args:
+        source_id (str): Entry ID in source corpus
+        source_corpus (str): Source corpus name
+        target_corpus (str): Target corpus name
+        
+    Returns:
+        list: Related entries in target corpus with mapping confidence
+    """
+
+def search_by_attribute(self, attribute_type, query_string, corpus_filter=None):
+    """
+    Search by specific linguistic attributes across multiple corpora.
+    
+    Args:
+        attribute_type (str): Type of attribute ('themrole', 'predicate', 'vs_feature', 
+                             'selrestr', 'synrestr', 'frame_element', 'semantic_type')
+        query_string (str): Attribute value to search
+        corpus_filter (list): Limit search to specific corpora
+        
+    Returns:
+        dict: Matched entries grouped by corpus with cross-references
+    """
+
+def find_semantic_relationships(self, entry_id, corpus, relationship_types=None, depth=2):
+    """
+    Discover semantic relationships across the corpus collection.
+    
+    Args:
+        entry_id (str): Starting entry ID
+        corpus (str): Starting corpus
+        relationship_types (list): Types of relationships to explore
+        depth (int): Maximum relationship depth to explore
+        
+    Returns:
+        dict: Semantic relationship graph with paths and distances
+    """
+
+#### Corpus-Specific Retrieval Methods
+
+```python
+def get_verbnet_class(self, class_id, include_subclasses=True, include_mappings=True):
+    """
+    Retrieve comprehensive VerbNet class information with cross-corpus integration.
     
     Args:
         class_id (str): VerbNet class identifier
+        include_subclasses (bool): Include hierarchical subclass information
+        include_mappings (bool): Include cross-corpus mappings
         
     Returns:
-        dict: VerbNet class data
+        dict: VerbNet class data with integrated cross-references
     """
 
-def get_framenet_frame(self, frame_name):
+def get_framenet_frame(self, frame_name, include_lexical_units=True, include_relations=True):
     """
-    Retrieve FrameNet frame information.
+    Retrieve comprehensive FrameNet frame information.
     
     Args:
         frame_name (str): FrameNet frame name
+        include_lexical_units (bool): Include all lexical units
+        include_relations (bool): Include frame-to-frame relations
         
     Returns:
-        dict: FrameNet frame data
+        dict: FrameNet frame data with semantic relations
     """
 
-def get_propbank_frame(self, lemma):
+def get_propbank_frame(self, lemma, include_examples=True, include_mappings=True):
     """
-    Retrieve PropBank frame information.
+    Retrieve PropBank frame information with cross-corpus integration.
     
     Args:
         lemma (str): PropBank lemma
+        include_examples (bool): Include annotated examples
+        include_mappings (bool): Include VerbNet/FrameNet mappings
         
     Returns:
-        dict: PropBank frame data
+        dict: PropBank frame data with cross-references
     """
 
-def get_ontonotes_entry(self, lemma):
+def get_ontonotes_entry(self, lemma, include_mappings=True):
     """
-    Retrieve OntoNotes entry information.
+    Retrieve OntoNotes sense inventory with cross-resource mappings.
     
     Args:
         lemma (str): OntoNotes lemma
+        include_mappings (bool): Include all cross-resource mappings
         
     Returns:
-        dict: OntoNotes entry data
+        dict: OntoNotes entry data with integrated references
+    """
+
+def get_wordnet_synsets(self, word, pos=None, include_relations=True):
+    """
+    Retrieve WordNet synset information with semantic relations.
+    
+    Args:
+        word (str): Word to look up
+        pos (str): Part of speech filter (optional)
+        include_relations (bool): Include hypernyms, hyponyms, etc.
+        
+    Returns:
+        list: WordNet synsets with relation hierarchies
+    """
+
+def get_bso_categories(self, verb_class=None, semantic_category=None):
+    """
+    Retrieve BSO broad semantic organization mappings.
+    
+    Args:
+        verb_class (str): VerbNet class to get BSO categories for
+        semantic_category (str): BSO category to get verb classes for
+        
+    Returns:
+        dict: BSO mappings with member verb information
+    """
+
+def get_semnet_data(self, lemma, pos='verb'):
+    """
+    Retrieve SemNet integrated semantic network data.
+    
+    Args:
+        lemma (str): Lemma to look up
+        pos (str): Part of speech ('verb' or 'noun')
+        
+    Returns:
+        dict: Integrated semantic network information
+    """
+
+def get_reference_definitions(self, reference_type, name=None):
+    """
+    Retrieve reference documentation (predicates, themroles, constants).
+    
+    Args:
+        reference_type (str): Type of reference ('predicate', 'themrole', 'constant', 'verb_specific')
+        name (str): Specific reference name (optional)
+        
+    Returns:
+        dict: Reference definitions and usage information
     """
 ```
+
+#### Cross-Corpus Integration Methods
+
+```python
+def get_complete_semantic_profile(self, lemma):
+    """
+    Get comprehensive semantic information from all loaded corpora.
+    
+    Args:
+        lemma (str): Lemma to analyze
+        
+    Returns:
+        dict: Integrated semantic profile across all resources
+    """
+
+def validate_cross_references(self, entry_id, source_corpus):
+    """
+    Validate cross-references between corpora for data integrity.
+    
+    Args:
+        entry_id (str): Entry ID to validate
+        source_corpus (str): Source corpus name
+        
+    Returns:
+        dict: Validation results for all cross-references
+    """
+
+def find_related_entries(self, entry_id, source_corpus, target_corpus):
+    """
+    Find related entries in target corpus using cross-reference mappings.
+    
+    Args:
+        entry_id (str): Source entry ID
+        source_corpus (str): Source corpus name
+        target_corpus (str): Target corpus name
+        
+    Returns:
+        list: Related entries with mapping confidence scores
+    """
+
+def trace_semantic_path(self, start_entry, end_entry, max_depth=3):
+    """
+    Find semantic relationship path between entries across corpora.
+    
+    Args:
+        start_entry (tuple): (corpus, entry_id) for starting point
+        end_entry (tuple): (corpus, entry_id) for target
+        max_depth (int): Maximum path length to explore
+        
+    Returns:
+        list: Semantic relationship paths with confidence scores
+    """
 
 #### Reference Data Methods
 
 ```python
 def get_references(self):
     """
-    Get all reference data for UI elements.
+    Get all reference data extracted from corpus files.
     
     Returns:
         dict: Contains gen_themroles, predicates, vs_features, syn_res, sel_res
@@ -118,7 +279,7 @@ def get_references(self):
 
 def get_themrole_references(self):
     """
-    Get all thematic role references.
+    Get all thematic role references from corpora files.
     
     Returns:
         list: Sorted list of thematic roles with descriptions
@@ -126,15 +287,15 @@ def get_themrole_references(self):
 
 def get_predicate_references(self):
     """
-    Get all predicate references.
+    Get all predicate references from reference documentation.
     
     Returns:
-        list: Sorted list of predicates with descriptions
+        list: Sorted list of predicates with definitions and usage
     """
 
 def get_verb_specific_features(self):
     """
-    Get all verb-specific features.
+    Get all verb-specific features from VerbNet corpus files.
     
     Returns:
         list: Sorted list of verb-specific features
@@ -142,7 +303,7 @@ def get_verb_specific_features(self):
 
 def get_syntactic_restrictions(self):
     """
-    Get all syntactic restrictions.
+    Get all syntactic restrictions from VerbNet corpus files.
     
     Returns:
         list: Sorted list of syntactic restrictions
@@ -150,29 +311,81 @@ def get_syntactic_restrictions(self):
 
 def get_selectional_restrictions(self):
     """
-    Get all selectional restrictions.
+    Get all selectional restrictions from VerbNet corpus files.
     
     Returns:
         list: Sorted list of selectional restrictions
     """
 ```
 
+#### Schema Validation Methods
+
+```python
+def validate_corpus_schemas(self, corpus_names=None):
+    """
+    Validate corpus files against their schemas (DTD/XSD/custom).
+    
+    Args:
+        corpus_names (list): Corpora to validate (default: all loaded)
+        
+    Returns:
+        dict: Validation results for each corpus
+    """
+
+def validate_xml_corpus(self, corpus_name):
+    """
+    Validate XML corpus files against DTD/XSD schemas.
+    
+    Args:
+        corpus_name (str): Name of XML-based corpus to validate
+        
+    Returns:
+        dict: Detailed validation results with error locations
+    """
+
+def check_data_integrity(self):
+    """
+    Check internal consistency and completeness of all loaded corpora.
+    
+    Returns:
+        dict: Comprehensive data integrity report
+    """
+```
+
 #### Data Export Methods
 
 ```python
-def export_resources(self, include_vn=False, include_fn=False, 
-                    include_pb=False, include_on=False):
+def export_resources(self, include_resources=None, format='json', include_mappings=True):
     """
-    Export selected linguistic resources as JSON.
+    Export selected linguistic resources in specified format.
     
     Args:
-        include_vn (bool): Include VerbNet data
-        include_fn (bool): Include FrameNet data
-        include_pb (bool): Include PropBank data
-        include_on (bool): Include OntoNotes data
+        include_resources (list): Resources to include ['vn', 'fn', 'pb', 'on', 'wn', 'bso', 'semnet', 'ref']
+        format (str): Export format ('json', 'xml', 'csv')
+        include_mappings (bool): Include cross-corpus mappings
         
     Returns:
-        str: JSON string of exported data
+        str: Exported data in specified format
+    """
+
+def export_cross_corpus_mappings(self):
+    """
+    Export comprehensive cross-corpus mapping data.
+    
+    Returns:
+        dict: Complete mapping relationships between all corpora
+    """
+
+def export_semantic_profile(self, lemma, format='json'):
+    """
+    Export complete semantic profile for a lemma across all corpora.
+    
+    Args:
+        lemma (str): Lemma to export profile for
+        format (str): Export format
+        
+    Returns:
+        str: Comprehensive semantic profile
     """
 ```
 
@@ -296,87 +509,100 @@ def get_verb_specific_fields(self, feature_name):
     """
 ```
 
-## 2. Refactoring Implementation Plan
+## 2. File-Based Implementation Plan
 
 ### Phase 1: Create UVI Class Structure
 1. **Create class initialization**
-   - Set up MongoDB connection
-   - Initialize database reference
-   - Create connection management methods
+   - Set up corpus file path configuration
+   - Initialize corpus data loaders for all 9 corpora
+   - Create file system navigation methods
+   - Load corpus schemas for validation
 
 2. **Import necessary dependencies**
-   - pymongo for database operations
-   - bson.json_util for JSON serialization
+   - xml.etree.ElementTree for XML parsing
+   - json for JSON corpus data
+   - csv for CSV corpus data
+   - lxml for XML schema validation
    - re for regex operations
-   - operator for sorting functions
+   - pathlib for cross-platform file operations
 
-### Phase 2: Migrate Core Methods from methods.py
-1. **Move database query methods**
-   - `find_matching_ids` → `search_lemmas`
-   - `find_matching_elements` → internal helper method
-   - `get_subclass_ids` → `get_subclass_ids`
-   - `full_class_hierarchy_tree` → `get_full_class_hierarchy`
+### Phase 2: Create Corpus File Parsers
+1. **XML-based corpus parsers**
+   - VerbNet XML parser (classes, members, frames, semantics)
+   - FrameNet XML parser (frames, lexical units, full-text annotations)
+   - PropBank XML parser (predicates, rolesets, examples)
+   - OntoNotes XML parser (sense inventories, mappings)
+   - VN API XML parser (enhanced VerbNet with API features)
 
-2. **Move utility methods**
-   - `top_parent_id` → `get_top_parent_id`
-   - `unique_id` → internal helper method
-   - `mongo_to_json` → internal helper method
-   - `remove_object_ids` → internal helper method
+2. **JSON-based corpus parsers**
+   - SemNet JSON parser (verb and noun semantic networks)
+   - Reference documentation JSON parser (predicates, constants, definitions)
 
-3. **Move sorting methods**
-   - `sort_by_char` → `get_class_hierarchy_by_name`
-   - `sort_by_id` → `get_class_hierarchy_by_id`
-   - `sort_key` → internal helper method
+3. **CSV-based corpus parsers** 
+   - BSO mapping CSV parser (VerbNet-BSO category mappings)
 
-4. **Move field retrieval methods**
-   - `get_themrole_fields` → `get_themrole_fields`
-   - `get_pred_fields` → `get_predicate_fields`
-   - `get_constant_fields` → `get_constant_fields`
-   - `get_verb_specific_fields` → `get_verb_specific_fields`
+4. **Custom format parsers**
+   - WordNet custom text format parser (data files, indices, exceptions)
 
-### Phase 3: Extract Business Logic from uvi_flask.py
-1. **Extract search logic from routes**
-   - Move lemma search logic from `process_query`
-   - Move attribute search logic (themrole, predicate, vs_feature, etc.)
-   - Move search result processing and filtering
+### Phase 3: Implement Core Search Methods (File-Based)
+1. **Convert database query methods to file parsing**
+   - `find_matching_ids` → `search_lemmas` (search across parsed corpus data)
+   - `find_matching_elements` → internal file search helper
+   - `get_subclass_ids` → parse VerbNet hierarchy from XML
+   - `full_class_hierarchy_tree` → build from parsed VerbNet files
 
-2. **Extract reference data retrieval**
-   - Move reference data queries to `get_references` method
-   - Create individual methods for each reference type
+2. **Convert utility methods to file operations**
+   - `top_parent_id` → extract from VerbNet file structures
+   - `unique_id` → generate for file-based entries
+   - Remove MongoDB-specific methods completely
 
-3. **Extract data export logic**
-   - Move export logic from `download_json` route
-   - Create `export_resources` method
+3. **Convert sorting methods to file-based data**
+   - `sort_by_char` → `get_class_hierarchy_by_name` (from parsed files)
+   - `sort_by_id` → `get_class_hierarchy_by_id` (from parsed files)
+   - `sort_key` → internal helper for file data
 
-4. **Extract VerbNet class processing**
-   - Move class retrieval logic from `display_element` and `render_vn_class`
-   - Move member filtering logic
+4. **Convert field retrieval to file parsing**
+   - `get_themrole_fields` → extract from reference docs files
+   - `get_pred_fields` → parse from reference documentation
+   - `get_constant_fields` → extract from reference TSV files
+   - `get_verb_specific_fields` → parse from VerbNet XML structures
 
-### Phase 4: Update uvi_flask.py Imports
-1. **Add UVI import**
-   ```python
-   from src.uvi.UVI import UVI
-   ```
+### Phase 4: Implement Cross-Corpus Integration
+1. **Build cross-reference mapping system**
+   - Parse all cross-corpus mappings from files (WordNet keys, PropBank groupings, FrameNet mappings, etc.)
+   - Create unified cross-reference index
+   - Implement validation for mapping integrity
 
-2. **Initialize UVI instance**
-   ```python
-   uvi = UVI(db_name=app.config['MONGO_DBNAME'])
-   ```
+2. **Implement semantic relationship discovery**
+   - Build semantic relationship graphs from parsed data
+   - Create path-finding algorithms for cross-corpus navigation
+   - Implement confidence scoring for relationships
 
-3. **Update route handlers to use UVI methods**
-   - Replace direct MongoDB queries with UVI method calls
-   - Maintain all Flask-specific rendering and template logic
+3. **Add schema validation capabilities**
+   - Load DTD/XSD schemas for XML corpora
+   - Implement validation methods for all corpus types
+   - Create data integrity checking
 
-### Phase 5: Maintain Backwards Compatibility
-1. **Keep all Flask routes unchanged**
-   - Routes remain at same URLs
-   - Request/response formats unchanged
-   - Template rendering unchanged
+### Phase 5: Extract and Convert Web-Independent Logic
+1. **Convert search logic to file-based operations**
+   - Extract lemma search logic from Flask routes but make file-based
+   - Convert attribute search to work with parsed corpus data
+   - Remove all MongoDB dependencies from search logic
 
-2. **Keep methods.py imports for Flask-specific functions**
-   - Functions used in templates (via context_processor)
-   - HTML formatting functions (`formatted_def`, `colored_pb_example`)
-   - Keep these in methods.py as they are presentation-layer specific
+2. **Convert reference data retrieval to file parsing**
+   - Extract reference data logic but parse from corpus files
+   - Create file-based methods for each reference type
+   - Parse themroles, predicates, constants from reference docs
+
+3. **Convert data export to file-based sources**
+   - Export logic works with parsed file data instead of database
+   - Support multiple export formats (JSON, XML, CSV)
+   - Include cross-corpus mappings in exports
+
+4. **Convert VerbNet processing to file operations**
+   - Parse class information directly from XML files
+   - Build hierarchies from file system and XML structure
+   - Remove database dependency completely
 
 ## 3. Testing Strategy
 
@@ -414,112 +640,159 @@ def get_verb_specific_fields(self, feature_name):
 - Keep only presentation-layer logic in routes
 - Document any methods that remain in methods.py
 
-## 5. Benefits of Refactoring
+## 5. Benefits of File-Based UVI Package
 
-1. **Separation of Concerns**: Business logic separated from web framework
-2. **Reusability**: UVI class can be used in non-web contexts (CLI, scripts, other applications)
-3. **Testing**: Easier to unit test business logic without Flask context
-4. **Maintainability**: Clear distinction between data layer and presentation layer
-5. **Flexibility**: Can easily swap web frameworks or create multiple interfaces
+1. **Complete Independence**: No database dependencies - works entirely with corpus files
+2. **Cross-Corpus Integration**: Unified access to all 9 linguistic corpora with semantic relationship discovery
+3. **Schema Validation**: Built-in validation against DTD/XSD schemas for data integrity
+4. **Reusability**: UVI package works in any Python environment (CLI, Jupyter, desktop apps, other web frameworks)
+5. **Comprehensive Coverage**: Single interface to VerbNet, FrameNet, PropBank, OntoNotes, WordNet, BSO, SemNet, and reference documentation
+6. **Testing**: Easy to unit test with file-based data sources
+7. **Portability**: Self-contained package that can be distributed with corpus files
+8. **Performance**: Direct file access eliminates database query overhead
+9. **Maintainability**: Clear separation between corpus parsing logic and any specific application use
 
 ## 6. Considerations
 
-1. **MongoDB Connection Management**: UVI class should handle connection lifecycle properly
-2. **Error Handling**: Add appropriate error handling for database operations
-3. **Configuration**: Allow flexible configuration without hardcoding values
-4. **Documentation**: Comprehensive docstrings for all public methods
-5. **Type Hints**: Consider adding type hints for better IDE support
+1. **File System Management**: UVI class should handle file access and caching efficiently
+2. **Error Handling**: Robust error handling for file parsing, schema validation, and missing files
+3. **Memory Management**: Efficient loading and caching of large corpus files 
+4. **Configuration**: Flexible corpus path configuration and format detection
+5. **Documentation**: Comprehensive docstrings for all public methods with examples
+6. **Type Hints**: Full type annotation support for better IDE integration
+7. **Cross-Platform Compatibility**: Ensure file path handling works across operating systems
+8. **Schema Compatibility**: Handle different versions of corpus formats gracefully
+9. **Performance**: Lazy loading and indexing strategies for large corpora
 
 ## 7. Future Enhancements
 
-1. **Caching**: Add caching layer for frequently accessed data
-2. **Async Support**: Consider async/await for database operations
-3. **Query Optimization**: Optimize complex MongoDB queries
-4. **API Versioning**: Prepare for potential API changes
-5. **Plugin System**: Allow extensions for additional linguistic resources
+1. **Advanced Caching**: Intelligent caching of parsed data with invalidation strategies
+2. **Async Support**: Asynchronous file I/O for better performance with large corpora
+3. **Query Optimization**: Optimize cross-corpus searches with indexing and caching
+4. **Corpus Versioning**: Support for multiple versions of corpus formats
+5. **Plugin Architecture**: Extensible system for adding new corpus types
+6. **Export Formats**: Additional export formats (RDF, XML, custom schemas)
+7. **Visualization**: Generate corpus relationship graphs and statistics
+8. **CLI Interface**: Command-line tools for corpus analysis and validation
+9. **Integration APIs**: Easy integration with NLP frameworks (spaCy, NLTK, etc.)
 
 ## 8. API Documentation for DataBuilder Class
 
-### Class: `DataBuilder`
+### Class: `CorpusLoader`
 
 ```python
-class DataBuilder:
+class CorpusLoader:
     """
-    A standalone class for building and maintaining MongoDB collections 
-    from corpus data sources (VerbNet, FrameNet, PropBank, OntoNotes).
+    A standalone class for loading, parsing, and organizing all corpus data
+    from file sources (VerbNet, FrameNet, PropBank, OntoNotes, WordNet, BSO, 
+    SemNet, Reference Docs, VN API) with cross-corpus integration.
     """
     
-    def __init__(self, db_name='new_corpora', mongo_uri='mongodb://localhost:27017/'):
+    def __init__(self, corpora_path='corpora/'):
         """
-        Initialize DataBuilder with MongoDB connection and corpus paths.
+        Initialize CorpusLoader with corpus file paths.
         
         Args:
-            db_name (str): Name of the MongoDB database
-            mongo_uri (str): MongoDB connection URI
+            corpora_path (str): Path to the corpora directory
         """
 ```
 
-### Configuration Methods
+### Corpus Loading Methods
 
 ```python
-def set_corpus_paths(self, verbnet_path=None, framenet_path=None, 
-                     propbank_path=None, ontonotes_url=None, wordnet_path=None,
-                     bso_path=None, reference_docs_path=None):
+def load_all_corpora(self):
     """
-    Set paths to corpus data sources.
+    Load and parse all available corpus files.
+    
+    Returns:
+        dict: Loading status and statistics for each corpus
+    """
+
+def load_corpus(self, corpus_name):
+    """
+    Load a specific corpus by name.
     
     Args:
-        verbnet_path (str): Path to VerbNet corpus directory
-        framenet_path (str): Path to FrameNet corpus directory
-        propbank_path (str): Path to PropBank frames directory
-        ontonotes_url (str): URL for OntoNotes data
-        wordnet_path (str): Path to WordNet directory
-        bso_path (str): Path to BSO mapping file
-        reference_docs_path (str): Path to reference documents
+        corpus_name (str): Name of corpus to load ('verbnet', 'framenet', etc.)
+        
+    Returns:
+        dict: Parsed corpus data with metadata
+    """
+
+def get_corpus_paths(self):
+    """
+    Get automatically detected corpus paths.
+    
+    Returns:
+        dict: Paths to all detected corpus directories and files
     """
 ```
 
-### Collection Building Methods
+### Parsing Methods
 
 ```python
-def build_all_collections(self):
+def parse_verbnet_files(self):
     """
-    Build all collections (VerbNet, FrameNet, PropBank, OntoNotes).
+    Parse all VerbNet XML files and build internal data structures.
     
     Returns:
-        dict: Status of each collection build
+        dict: Parsed VerbNet data with hierarchy and cross-references
     """
 
-def build_verbnet_collection(self):
+def parse_framenet_files(self):
     """
-    Build VerbNet collection from corpus files.
+    Parse FrameNet XML files (frames, lexical units, full-text).
     
     Returns:
-        bool: Success status
+        dict: Parsed FrameNet data with frame relationships
     """
 
-def build_framenet_collection(self):
+def parse_propbank_files(self):
     """
-    Build FrameNet collection from corpus files.
+    Parse PropBank XML files and extract predicate structures.
     
     Returns:
-        bool: Success status
+        dict: Parsed PropBank data with role mappings
     """
 
-def build_propbank_collection(self):
+def parse_ontonotes_files(self):
     """
-    Build PropBank collection from corpus files.
+    Parse OntoNotes XML sense inventory files.
     
     Returns:
-        bool: Success status
+        dict: Parsed OntoNotes data with cross-resource mappings
     """
 
-def build_ontonotes_collection(self):
+def parse_wordnet_files(self):
     """
-    Build OntoNotes collection from web resource.
+    Parse WordNet data files, indices, and exception lists.
     
     Returns:
-        bool: Success status
+        dict: Parsed WordNet data with synset relationships
+    """
+
+def parse_bso_mappings(self):
+    """
+    Parse BSO CSV mapping files.
+    
+    Returns:
+        dict: BSO category mappings to VerbNet classes
+    """
+
+def parse_semnet_data(self):
+    """
+    Parse SemNet JSON files for integrated semantic networks.
+    
+    Returns:
+        dict: Parsed SemNet data for verbs and nouns
+    """
+
+def parse_reference_docs(self):
+    """
+    Parse reference documentation (JSON/TSV files).
+    
+    Returns:
+        dict: Parsed reference definitions and constants
     """
 ```
 
@@ -1076,21 +1349,22 @@ def set_error_recovery_strategy(self, max_retries=3, retry_delay=30):
 
 ## 11. Refactoring Implementation Plan for New Classes
 
-### Phase 1: Create DataBuilder Class
-1. **Extract corpus building logic from build_mongo_collections.py**
-   - Move all parse functions (parse_sense, parse_on_frame, etc.)
-   - Move collection building functions
-   - Move reference data building functions
+### Phase 1: Create CorpusLoader Class
+1. **Create file-based corpus parsers**
+   - XML parsers for VerbNet, FrameNet, PropBank, OntoNotes, VN API
+   - JSON parsers for SemNet and Reference documentation  
+   - CSV parser for BSO mappings
+   - Custom parser for WordNet text formats
 
-2. **Create configurable paths**
-   - Remove hardcoded paths
-   - Add configuration methods
-   - Support environment variables
+2. **Create dynamic path detection**
+   - Auto-detect corpus directory structures
+   - Support flexible corpus organization
+   - Handle missing corpora gracefully
 
-3. **Add error handling and logging**
-   - Wrap database operations
-   - Add detailed logging
-   - Implement rollback on failure
+3. **Add comprehensive error handling**
+   - File access error handling
+   - XML/JSON parsing error recovery
+   - Schema validation error reporting
 
 ### Phase 2: Create Presentation Class
 1. **Extract presentation methods from methods.py**
@@ -1114,62 +1388,79 @@ def set_error_recovery_strategy(self, max_retries=3, retry_delay=30):
    - Add batch processing option
    - Implement proper error recovery
 
-### Phase 4: Update Existing Files
-1. **Update build_mongo_collections.py**
-   ```python
-   from src.uvi.DataBuilder import DataBuilder
-   
-   if __name__ == "__main__":
-       builder = DataBuilder()
-       builder.build_all_collections()
+### Phase 4: Create Standalone Package Structure
+1. **Create src/uvi/ package structure**
+   ```
+   src/uvi/
+   ├── __init__.py           # Package initialization
+   ├── UVI.py               # Main UVI class
+   ├── CorpusLoader.py      # File-based corpus loading
+   ├── Presentation.py      # Display formatting (web-independent)
+   ├── CorpusMonitor.py     # File system monitoring
+   ├── parsers/             # Individual corpus parsers
+   │   ├── __init__.py
+   │   ├── verbnet_parser.py
+   │   ├── framenet_parser.py
+   │   ├── propbank_parser.py
+   │   ├── ontonotes_parser.py
+   │   ├── wordnet_parser.py
+   │   ├── bso_parser.py
+   │   ├── semnet_parser.py
+   │   └── reference_parser.py
+   └── utils/               # Utility functions
+       ├── __init__.py
+       ├── validation.py    # Schema validation
+       ├── cross_refs.py    # Cross-corpus references
+       └── file_utils.py    # File system utilities
    ```
 
-2. **Update monitor_corpora.py**
+2. **Create example usage scripts**
    ```python
-   from src.uvi.DataBuilder import DataBuilder
-   from src.uvi.CorpusMonitor import CorpusMonitor
+   # examples/basic_usage.py
+   from src.uvi.UVI import UVI
    
-   builder = DataBuilder()
-   monitor = CorpusMonitor(builder)
-   monitor.start_monitoring()
+   uvi = UVI(corpora_path='corpora/')
+   profile = uvi.get_complete_semantic_profile('run')
    ```
 
-3. **Update methods.py**
+3. **Update existing scripts to use UVI package**
    ```python
-   from src.uvi.Presentation import Presentation
-   
-   presenter = Presentation()
-   # Keep only Flask-specific template helpers
+   # Use UVI package instead of database operations
+   # Maintain same functionality but file-based
    ```
 
-## 12. Benefits of Additional Refactoring
+## 12. Benefits of File-Based Class Architecture
 
-1. **DataBuilder Class Benefits**:
-   - Reusable corpus building logic
-   - Testable parsing functions
-   - Configurable paths and settings
-   - Better error handling
+1. **CorpusLoader Class Benefits**:
+   - Direct file parsing eliminates database dependencies
+   - Comprehensive support for all 9 corpus formats
+   - Built-in schema validation and error recovery
+   - Cross-corpus integration and relationship discovery
 
 2. **Presentation Class Benefits**:
-   - Separation of formatting from business logic
-   - Reusable across different UI frameworks
-   - Easier to test display logic
-   - Consistent formatting rules
+   - Web-framework independent formatting logic
+   - Reusable across different applications
+   - Consistent semantic data display
+   - Easy testing without web dependencies
 
 3. **CorpusMonitor Class Benefits**:
-   - Decoupled monitoring from building
-   - Flexible monitoring strategies
-   - Better error recovery
-   - Comprehensive logging
+   - Real-time file system monitoring
+   - Automatic corpus reloading on changes
+   - Flexible monitoring strategies for development
+   - Comprehensive change logging and error recovery
 
 ## 13. Testing Strategy for New Classes
 
-### DataBuilder Tests
-1. Test XML/HTML parsing functions
-2. Test collection building with sample data
-3. Test error handling for corrupt files
-4. Test BSO mapping integration
-5. Test reference data extraction
+### CorpusLoader Tests
+1. Test XML parsing for all corpus types (VerbNet, FrameNet, PropBank, OntoNotes, VN API)
+2. Test JSON parsing (SemNet, Reference Docs) 
+3. Test CSV parsing (BSO mappings)
+4. Test WordNet custom format parsing
+5. Test schema validation against DTD/XSD files
+6. Test cross-corpus reference resolution
+7. Test error handling for missing/corrupt files
+8. Test semantic relationship discovery
+9. Test memory management with large corpora
 
 ### Presentation Tests
 1. Test HTML generation functions
