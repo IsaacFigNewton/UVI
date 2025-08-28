@@ -118,3 +118,4 @@ venv.bak/
 #static files
 /static/images
 /uvi_web/static/images/Dep_Parses
+.claude/settings.local.json
