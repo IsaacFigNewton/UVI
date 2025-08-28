@@ -50,13 +50,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# File monitoring capabilities (optional)
+monitoring = [
+    "watchdog>=2.1.0"
+]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "black>=22.0.0",
     "flake8>=5.0.0",
     "mypy>=1.0.0",
-    "pre-commit>=2.20.0"
+    "pre-commit>=2.20.0",
+    "watchdog>=2.1.0"  # Include monitoring for development
 ]
 test = [
     "pytest>=7.0.0",

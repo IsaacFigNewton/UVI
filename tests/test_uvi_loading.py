@@ -183,8 +183,12 @@ class TestUVICorpusLoading(unittest.TestCase):
             # Verify error was printed
             mock_print.assert_called()
 
-    def test_load_corpus_verbnet(self):
+    @patch('pathlib.Path.exists')
+    def test_load_corpus_verbnet(self, mock_exists):
         """Test loading VerbNet corpus."""
+        # Mock path existence
+        mock_exists.return_value = True
+        
         with patch.object(self.uvi, '_load_verbnet') as mock_load_vn:
             self.uvi._load_corpus('verbnet')
             
@@ -205,6 +209,7 @@ class TestUVIVerbNetParsing(unittest.TestCase):
         """Set up test fixtures."""
         self.uvi = UVI.__new__(UVI)
         self.uvi.corpora_data = {}
+        self.uvi.loaded_corpora = set()
         
         # Sample VerbNet XML content
         self.sample_xml = '''<?xml version="1.0" encoding="UTF-8"?>
