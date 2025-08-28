@@ -11,7 +11,7 @@ documented in corpora/OVERVIEW.md, enabling seamless cross-corpus integration an
 """
 
 from .UVI import UVI
-from .CorpusLoader import CorpusLoader
+from .corpus_loader import CorpusLoader
 from .Presentation import Presentation
 from .CorpusMonitor import CorpusMonitor
 
@@ -20,9 +20,10 @@ __author__ = "UVI Development Team"
 __description__ = "Unified Verb Index - Comprehensive linguistic corpora access"
 
 # Export main classes and subpackages
-__all__ = ['UVI', 'CorpusLoader', 'Presentation', 'CorpusMonitor', 'parsers', 'utils']
+__all__ = ['UVI', 'CorpusLoader', 'Presentation', 'CorpusMonitor', 'corpus_loader', 'parsers', 'utils']
 
-# Make parsers and utils accessible
+# Make subpackages accessible
+from . import corpus_loader
 from . import parsers
 from . import utils
 

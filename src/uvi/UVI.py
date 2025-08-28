@@ -17,7 +17,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Union, Any, Tuple
 import os
-from .CorpusLoader import CorpusLoader
+from .corpus_loader import CorpusLoader
 
 
 class UVI:
@@ -1832,23 +1832,23 @@ class UVI:
         # Write header
         writer.writerow(['Resource', 'Key', 'Value'])
         
-        # Flatten the data
-        def flatten_dict(d, parent_key=''):
-            items = []
-            for k, v in d.items():
-                new_key = f"{parent_key}.{k}" if parent_key else k
-                if isinstance(v, dict):
-                    items.extend(flatten_dict(v, new_key).items())
-                else:
-                    items.append((new_key, str(v)))
-            return dict(items)
-        
         for resource, resource_data in data.get('resources', {}).items():
-            flat_data = flatten_dict(resource_data)
+            flat_data = self.flatten_dict(resource_data)
             for key, value in flat_data.items():
                 writer.writerow([resource, key, value])
         
         return output.getvalue()
+    
+    # Flatten the data
+    def flatten_dict(d:dict, parent_key='') -> Dict[str, str]:
+        items = []
+        for k, v in d.items():
+            new_key = f"{parent_key}.{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.extend(self.flatten_dict(v, new_key).items())
+            else:
+                items.append((new_key, str(v)))
+        return dict(items)
     
     def _flatten_profile_to_csv(self, profile: Dict[str, Any], lemma: str) -> str:
         """Convert semantic profile to CSV format."""

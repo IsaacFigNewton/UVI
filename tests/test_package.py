@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 # Add the src directory to Python path
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 def test_basic_imports():
     """Test that basic imports work."""
@@ -63,6 +63,37 @@ def test_parser_imports():
     
     print(f"Parser imports: {success_count}/{len(parsers_to_test)} successful")
     return success_count == len(parsers_to_test)
+
+def test_corpus_loader_imports():
+    """Test that corpus_loader imports work."""
+    print("\nTesting corpus_loader imports...")
+    
+    try:
+        from uvi import corpus_loader
+        print("[PASS] Successfully imported corpus_loader package")
+    except ImportError as e:
+        print(f"[FAIL] Failed to import corpus_loader package: {e}")
+        return False
+    
+    corpus_classes_to_test = [
+        'CorpusLoader',
+        'CorpusParser',
+        'CorpusCollectionBuilder',
+        'CorpusCollectionValidator',
+        'CorpusCollectionAnalyzer'
+    ]
+    
+    success_count = 0
+    for class_name in corpus_classes_to_test:
+        try:
+            exec(f"from uvi.corpus_loader import {class_name}")
+            print(f"[PASS] Successfully imported {class_name}")
+            success_count += 1
+        except ImportError as e:
+            print(f"[FAIL] Failed to import {class_name}: {e}")
+    
+    print(f"Corpus loader imports: {success_count}/{len(corpus_classes_to_test)} successful")
+    return success_count == len(corpus_classes_to_test)
 
 def test_utils_imports():
     """Test that utility imports work."""
@@ -141,6 +172,7 @@ def main():
     
     tests = [
         test_basic_imports,
+        test_corpus_loader_imports,
         test_parser_imports,
         test_utils_imports,
         test_uvi_initialization,

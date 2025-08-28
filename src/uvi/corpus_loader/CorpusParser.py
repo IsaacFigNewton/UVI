@@ -1,189 +1,44 @@
 """
-CorpusLoader Class
+CorpusParser Class
 
-A standalone class for loading, parsing, and organizing all corpus data
-from file sources (VerbNet, FrameNet, PropBank, OntoNotes, WordNet, BSO, 
-SemNet, Reference Docs, VN API) with cross-corpus integration.
+A specialized class for parsing various linguistic corpus formats (VerbNet, FrameNet, 
+PropBank, OntoNotes, WordNet, BSO, SemNet, Reference Docs, VN API).
 
-This class implements comprehensive file-based corpus loading with proper
-error handling, schema validation, and cross-corpus reference building.
+This class contains all parsing methods extracted from CorpusLoader as part of the 
+refactoring plan to separate concerns and improve maintainability.
 """
 
 import xml.etree.ElementTree as ET
 import json
 import csv
 import re
-import os
 from pathlib import Path
 from typing import Dict, List, Optional, Union, Any, Tuple
-from datetime import datetime
-import logging
 
 
-class CorpusLoader:
+class CorpusParser:
     """
-    A standalone class for loading, parsing, and organizing all corpus data
-    from file sources (VerbNet, FrameNet, PropBank, OntoNotes, WordNet, BSO, 
-    SemNet, Reference Docs, VN API) with cross-corpus integration.
+    A specialized class for parsing various linguistic corpus formats.
+    
+    This class handles the parsing of all corpus types including VerbNet, FrameNet,
+    PropBank, OntoNotes, WordNet, BSO mappings, SemNet data, reference documentation,
+    and VN API files.
     """
     
-    def __init__(self, corpora_path: str = 'corpora/'):
+    def __init__(self, corpus_paths: Dict[str, Path], logger):
         """
-        Initialize CorpusLoader with corpus file paths.
+        Initialize the CorpusParser with corpus paths and logger.
         
         Args:
-            corpora_path (str): Path to the corpora directory
+            corpus_paths (Dict[str, Path]): Dictionary mapping corpus names to their paths
+            logger: Logger instance for error reporting and information
         """
-        self.corpora_path = Path(corpora_path)
-        self.loaded_data = {}
-        self.corpus_paths = {}
-        self.load_status = {}
-        self.build_metadata = {}
-        self.reference_collections = {}
-        self.cross_references = {}
+        self.corpus_paths = corpus_paths
+        self.logger = logger
         self.bso_mappings = {}
-        
-        # Configure logging
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
-        
-        # Supported corpora with their expected directory names
-        self.corpus_mappings = {
-            'verbnet': ['verbnet', 'vn', 'verbnet3.4'],
-            'framenet': ['framenet', 'fn', 'framenet1.7'],
-            'propbank': ['propbank', 'pb', 'propbank3.4'],
-            'ontonotes': ['ontonotes', 'on', 'ontonotes5.0'],
-            'wordnet': ['wordnet', 'wn', 'wordnet3.1'],
-            'bso': ['BSO', 'bso', 'basic_semantic_ontology'],
-            'semnet': ['semnet20180205', 'semnet', 'semantic_network'],
-            'reference_docs': ['reference_docs', 'ref_docs', 'docs'],
-            'vn_api': ['vn_api', 'verbnet_api', 'vn']
-        }
-        
-        # Auto-detect corpus paths
-        self._detect_corpus_paths()
-    
-    def _detect_corpus_paths(self) -> None:
-        """
-        Automatically detect corpus paths from the base directory.
-        """
-        if not self.corpora_path.exists():
-            self.logger.warning(f"Corpora directory not found: {self.corpora_path}")
-            return
-        
-        for corpus_name, possible_dirs in self.corpus_mappings.items():
-            corpus_path = None
-            for dir_name in possible_dirs:
-                candidate_path = self.corpora_path / dir_name
-                if candidate_path.exists() and candidate_path.is_dir():
-                    corpus_path = candidate_path
-                    break
-            
-            if corpus_path:
-                self.corpus_paths[corpus_name] = corpus_path
-                self.logger.info(f"Found {corpus_name} corpus at: {corpus_path}")
-            else:
-                self.logger.warning(f"Corpus {corpus_name} not found in {self.corpora_path}")
-    
-    def get_corpus_paths(self) -> Dict[str, str]:
-        """
-        Get automatically detected corpus paths.
-        
-        Returns:
-            dict: Paths to all detected corpus directories and files
-        """
-        return {name: str(path) for name, path in self.corpus_paths.items()}
-    
-    def load_all_corpora(self) -> Dict[str, Any]:
-        """
-        Load and parse all available corpus files.
-        
-        Returns:
-            dict: Loading status and statistics for each corpus
-        """
-        self.logger.info("Starting to load all available corpora...")
-        
-        loading_results = {}
-        
-        for corpus_name in self.corpus_mappings.keys():
-            if corpus_name in self.corpus_paths:
-                try:
-                    start_time = datetime.now()
-                    result = self.load_corpus(corpus_name)
-                    end_time = datetime.now()
-                    
-                    loading_results[corpus_name] = {
-                        'status': 'success',
-                        'load_time': (end_time - start_time).total_seconds(),
-                        'data_keys': list(result.keys()) if isinstance(result, dict) else [],
-                        'timestamp': start_time.isoformat()
-                    }
-                    self.logger.info(f"Successfully loaded {corpus_name}")
-                    
-                except Exception as e:
-                    loading_results[corpus_name] = {
-                        'status': 'error',
-                        'error': str(e),
-                        'timestamp': datetime.now().isoformat()
-                    }
-                    self.logger.error(f"Failed to load {corpus_name}: {e}")
-            else:
-                loading_results[corpus_name] = {
-                    'status': 'not_found',
-                    'timestamp': datetime.now().isoformat()
-                }
-        
-        # Build reference collections after loading
-        self.build_reference_collections()
-        
-        return loading_results
-    
-    def load_corpus(self, corpus_name: str) -> Dict[str, Any]:
-        """
-        Load a specific corpus by name.
-        
-        Args:
-            corpus_name (str): Name of corpus to load ('verbnet', 'framenet', etc.)
-            
-        Returns:
-            dict: Parsed corpus data with metadata
-        """
-        if corpus_name not in self.corpus_paths:
-            raise FileNotFoundError(f"Corpus {corpus_name} not found in configured paths")
-        
-        corpus_path = self.corpus_paths[corpus_name]
-        
-        # Route to appropriate parser
-        if corpus_name == 'verbnet':
-            data = self.parse_verbnet_files()
-        elif corpus_name == 'framenet':
-            data = self.parse_framenet_files()
-        elif corpus_name == 'propbank':
-            data = self.parse_propbank_files()
-        elif corpus_name == 'ontonotes':
-            data = self.parse_ontonotes_files()
-        elif corpus_name == 'wordnet':
-            data = self.parse_wordnet_files()
-        elif corpus_name == 'bso':
-            data = self.parse_bso_mappings()
-        elif corpus_name == 'semnet':
-            data = self.parse_semnet_data()
-        elif corpus_name == 'reference_docs':
-            data = self.parse_reference_docs()
-        elif corpus_name == 'vn_api':
-            data = self.parse_vn_api_files()
-        else:
-            raise ValueError(f"Unsupported corpus type: {corpus_name}")
-        
-        self.loaded_data[corpus_name] = data
-        self.load_status[corpus_name] = {
-            'loaded': True,
-            'timestamp': datetime.now().isoformat(),
-            'path': str(corpus_path)
-        }
-        
-        return data
-    
+
+    # VerbNet parsing methods
+
     def parse_verbnet_files(self) -> Dict[str, Any]:
         """
         Parse all VerbNet XML files and build internal data structures.
@@ -215,24 +70,22 @@ class CorpusLoader:
         error_count = 0
         
         for xml_file in xml_files:
-            try:
-                class_data = self._parse_verbnet_class(xml_file)
-                if class_data and 'id' in class_data:
-                    verbnet_data['classes'][class_data['id']] = class_data
-                    
-                    # Build member index
-                    for member in class_data.get('members', []):
-                        member_name = member.get('name', '')
-                        if member_name:
-                            if member_name not in verbnet_data['members']:
-                                verbnet_data['members'][member_name] = []
-                            verbnet_data['members'][member_name].append(class_data['id'])
-                    
-                    parsed_count += 1
+            class_data = self._parse_verbnet_class(xml_file)
+            if class_data and 'id' in class_data:
+                verbnet_data['classes'][class_data['id']] = class_data
                 
-            except Exception as e:
+                # Build member index
+                for member in class_data.get('members', []):
+                    member_name = member.get('name', '')
+                    if member_name:
+                        if member_name not in verbnet_data['members']:
+                            verbnet_data['members'][member_name] = []
+                        verbnet_data['members'][member_name].append(class_data['id'])
+                
+                parsed_count += 1
+            else:
+                # Empty dict returned means parsing failed
                 error_count += 1
-                self.logger.error(f"Error parsing VerbNet file {xml_file}: {e}")
         
         # Build class hierarchy
         verbnet_data['hierarchy'] = self._build_verbnet_hierarchy(verbnet_data['classes'])
@@ -501,6 +354,8 @@ class CorpusLoader:
                             hierarchy['parent_child'][potential_parent].append(class_id)
         
         return hierarchy
+
+    # FrameNet parsing methods
     
     def parse_framenet_files(self) -> Dict[str, Any]:
         """
@@ -732,6 +587,8 @@ class CorpusLoader:
         except Exception as e:
             self.logger.error(f"Error parsing FrameNet relations: {e}")
             return {}
+
+    # PropBank parsing methods
     
     def parse_propbank_files(self) -> Dict[str, Any]:
         """
@@ -752,10 +609,15 @@ class CorpusLoader:
         
         # Find PropBank frame files
         frame_files = []
-        for pattern in ['*.xml', 'frames/*.xml', '**/frames/*.xml']:
+        for pattern in ['frames/*.xml', '**/frames/*.xml']:
             frame_files.extend(list(propbank_path.glob(pattern)))
         
-        # Filter out non-frame files
+        # Also check for verb frame files directly in the directory
+        verb_files = list(propbank_path.glob('*-v.xml'))
+        frame_files.extend(verb_files)
+        
+        # Remove duplicates and filter out non-frame files
+        frame_files = list(set(frame_files))
         frame_files = [f for f in frame_files if 'frames' in str(f) or '-v.xml' in f.name]
         
         parsed_count = 0
@@ -857,6 +719,8 @@ class CorpusLoader:
         except Exception as e:
             self.logger.error(f"Error parsing PropBank frame file {frame_file}: {e}")
             return {}
+
+    # OntoNotes parsing methods
     
     def parse_ontonotes_files(self) -> Dict[str, Any]:
         """
@@ -955,6 +819,8 @@ class CorpusLoader:
         except Exception as e:
             self.logger.error(f"Error parsing OntoNotes sense file {sense_file}: {e}")
             return {}
+
+    # WordNet parsing methods
     
     def parse_wordnet_files(self) -> Dict[str, Any]:
         """
@@ -1156,6 +1022,8 @@ class CorpusLoader:
                         exceptions[inflected_form] = base_forms
         
         return exceptions
+
+    # BSO mapping methods
     
     def parse_bso_mappings(self) -> Dict[str, Any]:
         """
@@ -1270,6 +1138,8 @@ class CorpusLoader:
                 class_data['bso_category'] = self.bso_mappings['vn_to_bso'][class_id]
         
         return verbnet_data
+
+    # SemNet parsing methods
     
     def parse_semnet_data(self) -> Dict[str, Any]:
         """
@@ -1318,6 +1188,8 @@ class CorpusLoader:
         self.logger.info(f"SemNet parsing complete")
         
         return semnet_data
+
+    # Reference documentation parsing methods
     
     def parse_reference_docs(self) -> Dict[str, Any]:
         """
@@ -1421,6 +1293,8 @@ class CorpusLoader:
                 data[key] = row
         
         return data
+
+    # VN API parsing methods
     
     def parse_vn_api_files(self) -> Dict[str, Any]:
         """
@@ -1447,417 +1321,4 @@ class CorpusLoader:
         api_data['api_version'] = '1.0'
         api_data['enhanced_features'] = True
         
-        self.logger.info(f"VN API parsing complete")
-        
         return api_data
-    
-    # Reference data building methods
-    
-    def build_reference_collections(self) -> Dict[str, bool]:
-        """
-        Build all reference collections for VerbNet components.
-        
-        Returns:
-            dict: Status of reference collection builds
-        """
-        results = {
-            'predicate_definitions': self.build_predicate_definitions(),
-            'themrole_definitions': self.build_themrole_definitions(),
-            'verb_specific_features': self.build_verb_specific_features(),
-            'syntactic_restrictions': self.build_syntactic_restrictions(),
-            'selectional_restrictions': self.build_selectional_restrictions()
-        }
-        
-        self.logger.info(f"Reference collections build complete: {sum(results.values())}/{len(results)} successful")
-        
-        return results
-    
-    def build_predicate_definitions(self) -> bool:
-        """
-        Build predicate definitions collection.
-        
-        Returns:
-            bool: Success status
-        """
-        try:
-            if 'reference_docs' in self.loaded_data:
-                ref_data = self.loaded_data['reference_docs']
-                predicates = ref_data.get('predicates', {})
-                
-                self.reference_collections['predicates'] = predicates
-                self.logger.info(f"Built predicate definitions: {len(predicates)} predicates")
-                return True
-            else:
-                self.logger.warning("Reference docs not loaded, cannot build predicate definitions")
-                return False
-        except Exception as e:
-            self.logger.error(f"Error building predicate definitions: {e}")
-            return False
-    
-    def build_themrole_definitions(self) -> bool:
-        """
-        Build thematic role definitions collection.
-        
-        Returns:
-            bool: Success status
-        """
-        try:
-            if 'reference_docs' in self.loaded_data:
-                ref_data = self.loaded_data['reference_docs']
-                themroles = ref_data.get('themroles', {})
-                
-                self.reference_collections['themroles'] = themroles
-                self.logger.info(f"Built thematic role definitions: {len(themroles)} roles")
-                return True
-            else:
-                self.logger.warning("Reference docs not loaded, cannot build themrole definitions")
-                return False
-        except Exception as e:
-            self.logger.error(f"Error building themrole definitions: {e}")
-            return False
-    
-    def build_verb_specific_features(self) -> bool:
-        """
-        Build verb-specific features collection.
-        
-        Returns:
-            bool: Success status
-        """
-        try:
-            features = set()
-            
-            # Extract from VerbNet data if available
-            if 'verbnet' in self.loaded_data:
-                verbnet_data = self.loaded_data['verbnet']
-                classes = verbnet_data.get('classes', {})
-                
-                for class_data in classes.values():
-                    for frame in class_data.get('frames', []):
-                        for semantics_group in frame.get('semantics', []):
-                            for pred in semantics_group:
-                                if pred.get('value'):
-                                    features.add(pred['value'])
-            
-            # Extract from reference docs if available
-            if 'reference_docs' in self.loaded_data:
-                ref_data = self.loaded_data['reference_docs']
-                vs_features = ref_data.get('verb_specific', {})
-                features.update(vs_features.keys())
-            
-            self.reference_collections['verb_specific_features'] = sorted(list(features))
-            self.logger.info(f"Built verb-specific features: {len(features)} features")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Error building verb-specific features: {e}")
-            return False
-    
-    def build_syntactic_restrictions(self) -> bool:
-        """
-        Build syntactic restrictions collection.
-        
-        Returns:
-            bool: Success status
-        """
-        try:
-            restrictions = set()
-            
-            # Extract from VerbNet data if available
-            if 'verbnet' in self.loaded_data:
-                verbnet_data = self.loaded_data['verbnet']
-                classes = verbnet_data.get('classes', {})
-                
-                for class_data in classes.values():
-                    for frame in class_data.get('frames', []):
-                        for syntax_group in frame.get('syntax', []):
-                            for element in syntax_group:
-                                for synrestr in element.get('synrestrs', []):
-                                    if synrestr.get('Value'):
-                                        restrictions.add(synrestr['Value'])
-            
-            self.reference_collections['syntactic_restrictions'] = sorted(list(restrictions))
-            self.logger.info(f"Built syntactic restrictions: {len(restrictions)} restrictions")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Error building syntactic restrictions: {e}")
-            return False
-    
-    def build_selectional_restrictions(self) -> bool:
-        """
-        Build selectional restrictions collection.
-        
-        Returns:
-            bool: Success status
-        """
-        try:
-            restrictions = set()
-            
-            # Extract from VerbNet data if available
-            if 'verbnet' in self.loaded_data:
-                verbnet_data = self.loaded_data['verbnet']
-                classes = verbnet_data.get('classes', {})
-                
-                for class_data in classes.values():
-                    for themrole in class_data.get('themroles', []):
-                        for selrestr in themrole.get('selrestrs', []):
-                            if selrestr.get('Value'):
-                                restrictions.add(selrestr['Value'])
-            
-            self.reference_collections['selectional_restrictions'] = sorted(list(restrictions))
-            self.logger.info(f"Built selectional restrictions: {len(restrictions)} restrictions")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Error building selectional restrictions: {e}")
-            return False
-    
-    # Validation methods
-    
-    def validate_collections(self) -> Dict[str, Any]:
-        """
-        Validate integrity of all collections.
-        
-        Returns:
-            dict: Validation results for each collection
-        """
-        validation_results = {}
-        
-        for corpus_name, corpus_data in self.loaded_data.items():
-            try:
-                if corpus_name == 'verbnet':
-                    validation_results[corpus_name] = self._validate_verbnet_collection(corpus_data)
-                elif corpus_name == 'framenet':
-                    validation_results[corpus_name] = self._validate_framenet_collection(corpus_data)
-                elif corpus_name == 'propbank':
-                    validation_results[corpus_name] = self._validate_propbank_collection(corpus_data)
-                else:
-                    validation_results[corpus_name] = {'status': 'no_validation', 'errors': []}
-                    
-            except Exception as e:
-                validation_results[corpus_name] = {
-                    'status': 'validation_error',
-                    'errors': [str(e)]
-                }
-        
-        return validation_results
-    
-    def _validate_verbnet_collection(self, verbnet_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Validate VerbNet collection integrity.
-        
-        Args:
-            verbnet_data (dict): VerbNet data to validate
-            
-        Returns:
-            dict: Validation results
-        """
-        errors = []
-        warnings = []
-        
-        classes = verbnet_data.get('classes', {})
-        
-        # Check for empty classes
-        for class_id, class_data in classes.items():
-            if not class_data.get('members'):
-                warnings.append(f"Class {class_id} has no members")
-            
-            if not class_data.get('frames'):
-                warnings.append(f"Class {class_id} has no frames")
-            
-            # Validate frame structure
-            for i, frame in enumerate(class_data.get('frames', [])):
-                if not frame.get('description', {}).get('primary'):
-                    warnings.append(f"Class {class_id} frame {i} missing primary description")
-        
-        status = 'valid' if not errors else 'invalid'
-        if warnings and status == 'valid':
-            status = 'valid_with_warnings'
-        
-        return {
-            'status': status,
-            'errors': errors,
-            'warnings': warnings,
-            'total_classes': len(classes)
-        }
-    
-    def _validate_framenet_collection(self, framenet_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Validate FrameNet collection integrity.
-        
-        Args:
-            framenet_data (dict): FrameNet data to validate
-            
-        Returns:
-            dict: Validation results
-        """
-        errors = []
-        warnings = []
-        
-        frames = framenet_data.get('frames', {})
-        
-        # Check for frames without lexical units
-        for frame_name, frame_data in frames.items():
-            if not frame_data.get('lexical_units'):
-                warnings.append(f"Frame {frame_name} has no lexical units")
-            
-            if not frame_data.get('definition'):
-                warnings.append(f"Frame {frame_name} missing definition")
-        
-        status = 'valid' if not errors else 'invalid'
-        if warnings and status == 'valid':
-            status = 'valid_with_warnings'
-        
-        return {
-            'status': status,
-            'errors': errors,
-            'warnings': warnings,
-            'total_frames': len(frames)
-        }
-    
-    def _validate_propbank_collection(self, propbank_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Validate PropBank collection integrity.
-        
-        Args:
-            propbank_data (dict): PropBank data to validate
-            
-        Returns:
-            dict: Validation results
-        """
-        errors = []
-        warnings = []
-        
-        predicates = propbank_data.get('predicates', {})
-        
-        # Check for predicates without rolesets
-        for lemma, predicate_data in predicates.items():
-            if not predicate_data.get('rolesets'):
-                warnings.append(f"Predicate {lemma} has no rolesets")
-            
-            for roleset in predicate_data.get('rolesets', []):
-                if not roleset.get('roles'):
-                    warnings.append(f"Roleset {roleset.get('id', 'unknown')} has no roles")
-        
-        status = 'valid' if not errors else 'invalid'
-        if warnings and status == 'valid':
-            status = 'valid_with_warnings'
-        
-        return {
-            'status': status,
-            'errors': errors,
-            'warnings': warnings,
-            'total_predicates': len(predicates)
-        }
-    
-    def validate_cross_references(self) -> Dict[str, Any]:
-        """
-        Validate cross-references between collections.
-        
-        Returns:
-            dict: Cross-reference validation results
-        """
-        validation_results = {
-            'vn_pb_mappings': {},
-            'vn_fn_mappings': {},
-            'vn_wn_mappings': {},
-            'on_mappings': {}
-        }
-        
-        # Validate VerbNet-PropBank mappings
-        if 'verbnet' in self.loaded_data and 'propbank' in self.loaded_data:
-            validation_results['vn_pb_mappings'] = self._validate_vn_pb_mappings()
-        
-        # Add other cross-reference validations as needed
-        
-        return validation_results
-    
-    def _validate_vn_pb_mappings(self) -> Dict[str, Any]:
-        """
-        Validate VerbNet-PropBank mappings.
-        
-        Returns:
-            dict: VN-PB mapping validation results
-        """
-        errors = []
-        warnings = []
-        
-        verbnet_data = self.loaded_data['verbnet']
-        propbank_data = self.loaded_data['propbank']
-        
-        vn_classes = verbnet_data.get('classes', {})
-        pb_predicates = propbank_data.get('predicates', {})
-        
-        # Check for missing cross-references
-        # This is a placeholder - actual validation would depend on mapping structure
-        
-        return {
-            'status': 'checked',
-            'errors': errors,
-            'warnings': warnings
-        }
-    
-    # Statistics methods
-    
-    def get_collection_statistics(self) -> Dict[str, Any]:
-        """
-        Get statistics for all collections.
-        
-        Returns:
-            dict: Statistics for each collection
-        """
-        statistics = {}
-        
-        for corpus_name, corpus_data in self.loaded_data.items():
-            try:
-                if corpus_name == 'verbnet':
-                    stats = corpus_data.get('statistics', {})
-                    stats.update({
-                        'classes': len(corpus_data.get('classes', {})),
-                        'members': len(corpus_data.get('members', {}))
-                    })
-                    statistics[corpus_name] = stats
-                    
-                elif corpus_name == 'framenet':
-                    stats = corpus_data.get('statistics', {})
-                    stats.update({
-                        'frames': len(corpus_data.get('frames', {})),
-                        'lexical_units': len(corpus_data.get('lexical_units', {}))
-                    })
-                    statistics[corpus_name] = stats
-                    
-                elif corpus_name == 'propbank':
-                    stats = corpus_data.get('statistics', {})
-                    stats.update({
-                        'predicates': len(corpus_data.get('predicates', {})),
-                        'rolesets': len(corpus_data.get('rolesets', {}))
-                    })
-                    statistics[corpus_name] = stats
-                    
-                else:
-                    statistics[corpus_name] = corpus_data.get('statistics', {})
-                    
-            except Exception as e:
-                statistics[corpus_name] = {'error': str(e)}
-        
-        # Add reference collection statistics
-        statistics['reference_collections'] = {
-            name: len(collection) if isinstance(collection, (list, dict)) else 0
-            for name, collection in self.reference_collections.items()
-        }
-        
-        return statistics
-    
-    def get_build_metadata(self) -> Dict[str, Any]:
-        """
-        Get metadata about last build times and versions.
-        
-        Returns:
-            dict: Build metadata
-        """
-        return {
-            'build_metadata': self.build_metadata,
-            'load_status': self.load_status,
-            'corpus_paths': self.get_corpus_paths(),
-            'timestamp': datetime.now().isoformat()
-        }
