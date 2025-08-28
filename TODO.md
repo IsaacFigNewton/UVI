@@ -22,15 +22,12 @@ class UVI:
     integration and validation.
     """
     
-    def __init__(self, corpora_path='corpora/', db_name='new_corpora', 
-                 mongo_uri='mongodb://localhost:27017/', load_all=True):
+    def __init__(self, corpora_path='corpora/', load_all=True):
         """
-        Initialize UVI with corpus data and optional MongoDB connection.
+        Initialize UVI with corpus file paths for standalone operation.
         
         Args:
-            corpora_path (str): Path to the corpora directory
-            db_name (str): Name of the MongoDB database (optional)
-            mongo_uri (str): MongoDB connection URI (optional)  
+            corpora_path (str): Path to the corpora directory containing all corpus files
             load_all (bool): Load all corpora on initialization
         """
 ```
@@ -545,7 +542,7 @@ def get_verb_specific_fields(self, feature_name):
    - WordNet custom text format parser (data files, indices, exceptions)
 
 ### Phase 3: Implement Core Search Methods (File-Based)
-1. **Convert database query methods to file parsing**
+1. **Convert existing query methods to file parsing**
    - `find_matching_ids` → `search_lemmas` (search across parsed corpus data)
    - `find_matching_elements` → internal file search helper
    - `get_subclass_ids` → parse VerbNet hierarchy from XML
@@ -554,7 +551,7 @@ def get_verb_specific_fields(self, feature_name):
 2. **Convert utility methods to file operations**
    - `top_parent_id` → extract from VerbNet file structures
    - `unique_id` → generate for file-based entries
-   - Remove MongoDB-specific methods completely
+   - Remove all external data dependency methods
 
 3. **Convert sorting methods to file-based data**
    - `sort_by_char` → `get_class_hierarchy_by_name` (from parsed files)
@@ -587,7 +584,7 @@ def get_verb_specific_fields(self, feature_name):
 1. **Convert search logic to file-based operations**
    - Extract lemma search logic from Flask routes but make file-based
    - Convert attribute search to work with parsed corpus data
-   - Remove all MongoDB dependencies from search logic
+   - Remove all external data dependencies from search logic
 
 2. **Convert reference data retrieval to file parsing**
    - Extract reference data logic but parse from corpus files
@@ -595,34 +592,39 @@ def get_verb_specific_fields(self, feature_name):
    - Parse themroles, predicates, constants from reference docs
 
 3. **Convert data export to file-based sources**
-   - Export logic works with parsed file data instead of database
+   - Export logic works with parsed file data from corpus files
    - Support multiple export formats (JSON, XML, CSV)
    - Include cross-corpus mappings in exports
 
 4. **Convert VerbNet processing to file operations**
    - Parse class information directly from XML files
    - Build hierarchies from file system and XML structure
-   - Remove database dependency completely
+   - Eliminate any external data dependencies
 
 ## 3. Testing Strategy
 
 ### Unit Tests for UVI Class
-1. Test database connection initialization
+1. Test file-based corpus loading and parsing for all 9 corpora
 2. Test each search method with various parameters
-3. Test data retrieval methods
-4. Test export functionality
-5. Test utility methods
+3. Test data retrieval methods from parsed files
+4. Test export functionality with file-based data
+5. Test utility methods for file operations
+6. Test schema validation against DTD/XSD files
+7. Test cross-corpus reference resolution
+8. Test error handling for missing or corrupt files
+9. Test semantic relationship discovery across corpora
 
 ### Integration Tests
-1. Verify Flask app continues to work with UVI class
-2. Test all routes produce same results as before refactoring
-3. Verify template rendering still functions correctly
+1. Test complete semantic profile generation across all 9 corpora
+2. Test cross-corpus navigation and relationship discovery
+3. Test file system monitoring and reloading capabilities
+4. Test memory management with large corpus files
 
 ## 4. Migration Steps
 
 ### Step 1: Create UVI.py with basic structure
 - Define class with __init__ method
-- Set up MongoDB connection
+- Set up corpus file path configuration and parsers for all 9 corpora
 
 ### Step 2: Migrate and adapt methods one category at a time
 - Start with utility methods (least dependencies)
@@ -630,26 +632,27 @@ def get_verb_specific_fields(self, feature_name):
 - Then search methods
 - Finally complex query methods
 
-### Step 3: Update uvi_flask.py incrementally
-- Add UVI import and initialization
-- Update one route at a time
-- Test each route after updating
+### Step 3: Create supporting classes
+- Implement CorpusLoader for parsing all 9 corpus formats
+- Create Presentation class for web-independent formatting
+- Build CorpusMonitor for file system change detection
 
-### Step 4: Clean up
-- Remove redundant MongoDB queries from uvi_flask.py
-- Keep only presentation-layer logic in routes
-- Document any methods that remain in methods.py
+### Step 4: Validate and test
+- Test file parsing against all corpus schemas
+- Validate cross-corpus reference integrity
+- Test standalone package functionality
+- Create example usage scripts and documentation
 
 ## 5. Benefits of File-Based UVI Package
 
-1. **Complete Independence**: No database dependencies - works entirely with corpus files
+1. **Complete Independence**: No external dependencies - works entirely with corpus files
 2. **Cross-Corpus Integration**: Unified access to all 9 linguistic corpora with semantic relationship discovery
 3. **Schema Validation**: Built-in validation against DTD/XSD schemas for data integrity
 4. **Reusability**: UVI package works in any Python environment (CLI, Jupyter, desktop apps, other web frameworks)
 5. **Comprehensive Coverage**: Single interface to VerbNet, FrameNet, PropBank, OntoNotes, WordNet, BSO, SemNet, and reference documentation
 6. **Testing**: Easy to unit test with file-based data sources
 7. **Portability**: Self-contained package that can be distributed with corpus files
-8. **Performance**: Direct file access eliminates database query overhead
+8. **Performance**: Direct file access eliminates external data access overhead
 9. **Maintainability**: Clear separation between corpus parsing logic and any specific application use
 
 ## 6. Considerations
@@ -676,7 +679,7 @@ def get_verb_specific_fields(self, feature_name):
 8. **CLI Interface**: Command-line tools for corpus analysis and validation
 9. **Integration APIs**: Easy integration with NLP frameworks (spaCy, NLTK, etc.)
 
-## 8. API Documentation for DataBuilder Class
+## 8. API Documentation for CorpusLoader Class
 
 ### Class: `CorpusLoader`
 
@@ -982,25 +985,25 @@ class Presentation:
 ### HTML Generation Methods
 
 ```python
-def generate_class_hierarchy_html(self, class_id, db_connection):
+def generate_class_hierarchy_html(self, class_id, uvi_instance):
     """
     Generate HTML representation of class hierarchy.
     
     Args:
         class_id (str): VerbNet class ID
-        db_connection: Database connection
+        uvi_instance: UVI instance for data access
         
     Returns:
         str: HTML string for class hierarchy
     """
 
-def generate_sanitized_class_html(self, vn_class_id, db_connection):
+def generate_sanitized_class_html(self, vn_class_id, uvi_instance):
     """
     Generate sanitized VerbNet class HTML.
     
     Args:
         vn_class_id (str): VerbNet class ID
-        db_connection: Database connection
+        uvi_instance: UVI instance for data access
         
     Returns:
         str: Sanitized HTML representation
@@ -1086,10 +1089,10 @@ def generate_unique_id(self):
 
 def json_to_display(self, elements):
     """
-    Convert MongoDB elements to display-ready JSON.
+    Convert parsed corpus elements to display-ready JSON.
     
     Args:
-        elements: MongoDB cursor or list
+        elements: Parsed corpus data list or dict
         
     Returns:
         str: JSON string for display
@@ -1097,13 +1100,13 @@ def json_to_display(self, elements):
 
 def strip_object_ids(self, data):
     """
-    Remove MongoDB ObjectIds from data for clean display.
+    Remove internal IDs and metadata from data for clean display.
     
     Args:
-        data (dict/list): Data containing ObjectIds
+        data (dict/list): Data containing internal identifiers
         
     Returns:
-        dict/list: Data without ObjectIds
+        dict/list: Data without internal identifiers
     """
 ```
 
@@ -1136,10 +1139,10 @@ class CorpusMonitor:
     
     def __init__(self, data_builder):
         """
-        Initialize CorpusMonitor with DataBuilder instance.
+        Initialize CorpusMonitor with CorpusLoader instance.
         
         Args:
-            data_builder (DataBuilder): Instance of DataBuilder for rebuilds
+            corpus_loader (CorpusLoader): Instance of CorpusLoader for rebuilds
         """
 ```
 
@@ -1374,7 +1377,7 @@ def set_error_recovery_strategy(self, max_retries=3, retry_delay=30):
 
 2. **Separate concerns**
    - Pure formatting logic
-   - No database dependencies in formatting
+   - No external data dependencies in formatting
    - Reusable across different view layers
 
 ### Phase 3: Create CorpusMonitor Class
@@ -1425,14 +1428,14 @@ def set_error_recovery_strategy(self, max_retries=3, retry_delay=30):
 
 3. **Update existing scripts to use UVI package**
    ```python
-   # Use UVI package instead of database operations
+   # Use UVI package for file-based corpus access
    # Maintain same functionality but file-based
    ```
 
 ## 12. Benefits of File-Based Class Architecture
 
 1. **CorpusLoader Class Benefits**:
-   - Direct file parsing eliminates database dependencies
+   - Direct file parsing eliminates all external dependencies
    - Comprehensive support for all 9 corpus formats
    - Built-in schema validation and error recovery
    - Cross-corpus integration and relationship discovery
@@ -1479,7 +1482,7 @@ def set_error_recovery_strategy(self, max_retries=3, retry_delay=30):
 ## 14. Migration Timeline
 
 ### Week 1: Core Class Development
-- Days 1-2: Create DataBuilder class
+- Days 1-2: Create CorpusLoader class with file-based parsers
 - Days 3-4: Create Presentation class
 - Day 5: Create CorpusMonitor class
 
@@ -1496,9 +1499,9 @@ def set_error_recovery_strategy(self, max_retries=3, retry_delay=30):
 ## 15. Future Considerations
 
 1. **Performance Optimization**:
-   - Implement incremental builds for DataBuilder
-   - Add caching for Presentation formatting
-   - Optimize file watching in CorpusMonitor
+   - Implement incremental parsing for CorpusLoader
+   - Add intelligent caching for parsed corpus data
+   - Optimize file watching and change detection in CorpusMonitor
 
 2. **Extensibility**:
    - Plugin system for new corpus types
@@ -1506,6 +1509,6 @@ def set_error_recovery_strategy(self, max_retries=3, retry_delay=30):
    - Webhook support in CorpusMonitor
 
 3. **Scalability**:
-   - Support for distributed building
-   - Parallel processing for large corpora
-   - Cloud storage integration
+   - Support for parallel corpus parsing
+   - Streaming processing for very large corpus files
+   - Memory-efficient lazy loading strategies
