@@ -106,6 +106,7 @@ def find_semantic_relationships(self, entry_id, corpus, relationship_types=None,
     Returns:
         dict: Semantic relationship graph with paths and distances
     """
+```
 
 #### Corpus-Specific Retrieval Methods
 

@@ -1,0 +1,34 @@
+"""
+UVI (Unified Verb Index) Package
+
+A comprehensive standalone package providing integrated access to all nine linguistic 
+corpora (VerbNet, FrameNet, PropBank, OntoNotes, WordNet, BSO, SemNet, Reference Docs, 
+VN API) with cross-resource navigation, semantic validation, and hierarchical analysis 
+capabilities.
+
+This package implements the universal interface patterns and shared semantic frameworks 
+documented in corpora/OVERVIEW.md, enabling seamless cross-corpus integration and validation.
+"""
+
+from .UVI import UVI
+
+__version__ = "1.0.0"
+__author__ = "UVI Development Team"
+__description__ = "Unified Verb Index - Comprehensive linguistic corpora access"
+
+# Export main classes
+__all__ = ['UVI']
+
+# Package metadata
+SUPPORTED_CORPORA = [
+    'verbnet', 'framenet', 'propbank', 'ontonotes', 'wordnet',
+    'bso', 'semnet', 'reference_docs', 'vn_api'
+]
+
+def get_version():
+    """Get the current version of the UVI package."""
+    return __version__
+
+def get_supported_corpora():
+    """Get list of supported corpora."""
+    return SUPPORTED_CORPORA.copy()
