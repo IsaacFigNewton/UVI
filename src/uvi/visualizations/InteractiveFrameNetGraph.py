@@ -28,16 +28,27 @@ class InteractiveFrameNetGraph(FrameNetVisualizer):
         if event.inaxes != self.ax:
             return
         
-        # Find the closest node
+        # Find the closest node within actual node boundaries
         if self.pos and event.xdata is not None and event.ydata is not None:
             closest_node = None
             min_dist = float('inf')
             
+            # Calculate appropriate hover threshold based on node size and axis limits
+            xlim = self.ax.get_xlim()
+            ylim = self.ax.get_ylim()
+            x_range = xlim[1] - xlim[0]
+            y_range = ylim[1] - ylim[0]
+            
+            # Node size in data coordinates (approximate radius)
+            # Default node_size is 2000, which roughly corresponds to this threshold
+            hover_threshold = min(x_range, y_range) * 0.05  # Much smaller threshold
+            
             for node, (x, y) in self.pos.items():
                 dist = ((event.xdata - x) ** 2 + (event.ydata - y) ** 2) ** 0.5
-                if dist < min_dist and dist < 0.5:  # Within hover threshold
-                    min_dist = dist
-                    closest_node = node
+                if dist < hover_threshold:
+                    if dist < min_dist:
+                        min_dist = dist
+                        closest_node = node
             
             if closest_node and closest_node != self.selected_node:
                 # Show tooltip
@@ -50,16 +61,26 @@ class InteractiveFrameNetGraph(FrameNetVisualizer):
         if event.inaxes != self.ax:
             return
         
-        # Find clicked node
+        # Find clicked node using same precise detection as hover
         if self.pos and event.xdata is not None and event.ydata is not None:
             closest_node = None
             min_dist = float('inf')
             
+            # Calculate appropriate click threshold based on node size and axis limits
+            xlim = self.ax.get_xlim()
+            ylim = self.ax.get_ylim()
+            x_range = xlim[1] - xlim[0]
+            y_range = ylim[1] - ylim[0]
+            
+            # Same threshold as hover for consistency
+            click_threshold = min(x_range, y_range) * 0.05
+            
             for node, (x, y) in self.pos.items():
                 dist = ((event.xdata - x) ** 2 + (event.ydata - y) ** 2) ** 0.5
-                if dist < min_dist and dist < 0.5:  # Within click threshold
-                    min_dist = dist
-                    closest_node = node
+                if dist < click_threshold:
+                    if dist < min_dist:
+                        min_dist = dist
+                        closest_node = node
             
             if closest_node:
                 self.select_node(closest_node)
@@ -85,9 +106,17 @@ class InteractiveFrameNetGraph(FrameNetVisualizer):
     def hide_tooltip(self):
         """Hide the tooltip."""
         if self.annotation:
-            self.annotation.remove()
-            self.annotation = None
-            self.fig.canvas.draw_idle()
+            try:
+                self.annotation.set_visible(False)
+                self.fig.canvas.draw_idle()
+            except:
+                # If visibility toggle fails, try remove
+                try:
+                    self.annotation.remove()
+                except:
+                    pass
+            finally:
+                self.annotation = None
     
     def select_node(self, node):
         """Select a node and highlight it."""

@@ -24,6 +24,9 @@ keywords = [
     "wordnet",
     "corpus",
     "semantic-analysis"
+    "matplotlib",
+    "plotly",
+    "networkx"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
