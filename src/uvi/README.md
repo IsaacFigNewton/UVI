@@ -45,6 +45,115 @@ The UVI package implements universal interface patterns and shared semantic fram
 
 ## Architecture
 
+### System Architecture Diagram
+
+```mermaid
+graph TB
+    subgraph "Public Interface"
+        UVI[UVI Main Class<br/>Public API Methods]
+    end
+    
+    subgraph "Helper Classes Layer"
+        SE[SearchEngine<br/>Search & Query]
+        CR[CorpusRetriever<br/>Data Retrieval]
+        CRM[CrossReferenceManager<br/>Cross-Corpus Navigation]
+        RDP[ReferenceDataProvider<br/>Reference Data]
+        VM[ValidationManager<br/>Validation]
+        EM[ExportManager<br/>Export Functions]
+        AM[AnalyticsManager<br/>Analytics]
+        PE[ParsingEngine<br/>Parsing Ops]
+    end
+    
+    subgraph "CorpusLoader Components"
+        CP[CorpusParser<br/>XML/File Parsing]
+        CCB[CorpusCollectionBuilder<br/>Collection Building]
+        CCV[CorpusCollectionValidator<br/>Validation Logic]
+        CCA[CorpusCollectionAnalyzer<br/>Analytics & Stats]
+    end
+    
+    subgraph "Data Layer"
+        VN[VerbNet]
+        FN[FrameNet]
+        PB[PropBank]
+        ON[OntoNotes]
+        WN[WordNet]
+        BSO[BSO]
+        SN[SemNet]
+        REF[References]
+        API[VN API]
+    end
+    
+    %% UVI delegates to Helper Classes
+    UVI --> SE
+    UVI --> CR
+    UVI --> CRM
+    UVI --> RDP
+    UVI --> VM
+    UVI --> EM
+    UVI --> AM
+    UVI --> PE
+    
+    %% Helper Classes integrate with CorpusLoader Components
+    SE --> CCA
+    SE --> CCB
+    CR --> CP
+    CR --> CCB
+    CRM --> CCV
+    RDP --> CCB
+    VM --> CCV
+    VM --> CP
+    EM --> CCA
+    AM --> CCA
+    PE --> CP
+    
+    %% CorpusLoader Components access Data Layer
+    CP --> VN
+    CP --> FN
+    CP --> PB
+    CP --> ON
+    CP --> WN
+    CP --> BSO
+    CP --> SN
+    CP --> REF
+    CP --> API
+    
+    CCB --> VN
+    CCB --> FN
+    CCB --> PB
+    
+    CCV --> VN
+    CCV --> FN
+    CCV --> PB
+    
+    CCA --> VN
+    CCA --> FN
+    CCA --> PB
+    
+    style UVI fill:#e1f5fe,stroke:#000,color:#000
+    style SE fill:#fff3e0,stroke:#000,color:#000
+    style CR fill:#fff3e0,stroke:#000,color:#000
+    style CRM fill:#fff3e0,stroke:#000,color:#000
+    style RDP fill:#fff3e0,stroke:#000,color:#000
+    style VM fill:#fff3e0,stroke:#000,color:#000
+    style EM fill:#fff3e0,stroke:#000,color:#000
+    style AM fill:#fff3e0,stroke:#000,color:#000
+    style PE fill:#fff3e0,stroke:#000,color:#000
+    style CP fill:#f3e5f5,stroke:#000,color:#000
+    style CCB fill:#f3e5f5,stroke:#000,color:#000
+    style CCV fill:#f3e5f5,stroke:#000,color:#000
+    style CCA fill:#f3e5f5,stroke:#000,color:#000
+    style VN fill:#e8f5e9,stroke:#000,color:#000
+    style FN fill:#e8f5e9,stroke:#000,color:#000
+    style PB fill:#e8f5e9,stroke:#000,color:#000
+    style ON fill:#e8f5e9,stroke:#000,color:#000
+    style WN fill:#e8f5e9,stroke:#000,color:#000
+    style BSO fill:#e8f5e9,stroke:#000,color:#000
+    style SN fill:#e8f5e9,stroke:#000,color:#000
+    style REF fill:#e8f5e9,stroke:#000,color:#000
+    style API fill:#e8f5e9,stroke:#000,color:#000
+
+```
+
 ### Modular Helper Class System
 
 The UVI package has been refactored from a monolithic design into a modular architecture using specialized helper classes that integrate with the CorpusLoader components:
