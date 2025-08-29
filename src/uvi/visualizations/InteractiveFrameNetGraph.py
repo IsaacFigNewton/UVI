@@ -151,6 +151,8 @@ class InteractiveFrameNetGraph(FrameNetVisualizer):
                 size = 3000  # Selected nodes are largest
             elif node_type == 'lexical_unit':
                 size = 1000  # Lexical units are smaller
+            elif node_type == 'frame_element':
+                size = 800   # Frame elements are smallest
             else:
                 size = 2000  # Frames are medium size
             

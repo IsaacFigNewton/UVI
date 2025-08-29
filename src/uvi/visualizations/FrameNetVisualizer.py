@@ -122,6 +122,8 @@ class FrameNetVisualizer:
         # Different colors for different node types
         if node_type == 'lexical_unit':
             return 'lightyellow'  # Lexical units get yellow color
+        elif node_type == 'frame_element':
+            return 'lightpink'    # Frame elements get pink color
         
         # For frames, use DAG-based coloring
         in_degree = self.G.in_degree(node)
@@ -163,6 +165,18 @@ class FrameNetVisualizer:
             info.append(f"Frame: {frame_info.get('frame', 'Unknown')}")
             info.append(f"Depth: {data.get('depth', 'Unknown')}")
             info.append(f"POS: {frame_info.get('pos', 'Unknown')}")
+            
+            definition = frame_info.get('definition', '')
+            if definition and len(definition.strip()) > 0:
+                if len(definition) > 100:
+                    definition = definition[:97] + "..."
+                info.append(f"Definition: {definition}")
+        elif node_type == 'frame_element':
+            info = [f"Frame Element: {frame_info.get('name', node)}"]
+            info.append(f"Frame: {frame_info.get('frame', 'Unknown')}")
+            info.append(f"Depth: {data.get('depth', 'Unknown')}")
+            info.append(f"Core Type: {frame_info.get('core_type', 'Unknown')}")
+            info.append(f"ID: {frame_info.get('id', 'Unknown')}")
             
             definition = frame_info.get('definition', '')
             if definition and len(definition.strip()) > 0:
@@ -234,7 +248,8 @@ class FrameNetVisualizer:
             Patch(facecolor='lightgreen', label='Intermediate Frames'),
             Patch(facecolor='lightcoral', label='Sink Frames (no children)'),
             Patch(facecolor='lightgray', label='Isolated Frames'),
-            Patch(facecolor='lightyellow', label='Lexical Units')
+            Patch(facecolor='lightyellow', label='Lexical Units'),
+            Patch(facecolor='lightpink', label='Frame Elements')
         ]
     
     def create_taxonomic_legend(self):

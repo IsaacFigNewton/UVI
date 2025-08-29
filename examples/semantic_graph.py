@@ -41,9 +41,9 @@ except ImportError as e:
     sys.exit(1)
 
 
-def create_demo_graph(framenet_data, num_frames=6, max_lus_per_frame=3):
-    """Create a demo graph using actual FrameNet frames and their lexical units."""
-    print(f"Creating demo graph with {num_frames} FrameNet frames and their lexical units...")
+def create_demo_graph(framenet_data, num_frames=6, max_lus_per_frame=3, max_fes_per_frame=3):
+    """Create a demo graph using actual FrameNet frames, their lexical units, and frame elements."""
+    print(f"Creating demo graph with {num_frames} FrameNet frames, their lexical units, and frame elements...")
     
     frames_data = framenet_data.get('frames', {})
     if not frames_data:
@@ -127,7 +127,36 @@ def create_demo_graph(framenet_data, num_frames=6, max_lus_per_frame=3):
                 
                 # Update frame's children list
                 hierarchy[frame_name]['children'].append(lu_full_name)
-        # If no lexical units exist, just leave the frame without children
+        
+        # Add frame elements as child nodes (if any exist)
+        frame_elements = frame_data.get('frame_elements', {})
+        if frame_elements and isinstance(frame_elements, dict):
+            fe_items = list(frame_elements.items())[:max_fes_per_frame]
+            for k, (fe_name, fe_data) in enumerate(fe_items):
+                fe_full_name = f"{fe_name}.{frame_name}"  # Make FE names unique
+                
+                # Add FE node to graph
+                G.add_node(fe_full_name, node_type='frame_element')
+                G.add_edge(frame_name, fe_full_name)
+                
+                # Create hierarchy entry for frame element
+                hierarchy[fe_full_name] = {
+                    'parents': [frame_name],
+                    'children': [],
+                    'frame_info': {
+                        'name': fe_data.get('name', fe_name),
+                        'definition': fe_data.get('definition', 'No definition available'),
+                        'core_type': fe_data.get('coreType', 'Unknown'),
+                        'id': fe_data.get('ID', 'Unknown'),
+                        'frame': frame_name,
+                        'node_type': 'frame_element'
+                    }
+                }
+                
+                # Update frame's children list
+                hierarchy[frame_name]['children'].append(fe_full_name)
+        
+        # If no lexical units or frame elements exist, just leave the frame without children
         # Only use actual FrameNet data
         
         # Add some demo frame-to-frame connections for layout
@@ -204,7 +233,7 @@ def main():
         print(f"Found {total_frames} frames in FrameNet")
         
         # Create demo graph with actual FrameNet frames and lexical units
-        G, hierarchy = create_demo_graph(framenet_data, num_frames=5, max_lus_per_frame=2)
+        G, hierarchy = create_demo_graph(framenet_data, num_frames=5, max_lus_per_frame=2, max_fes_per_frame=2)
         
         if G is None or G.number_of_nodes() == 0:
             print("Could not create visualization graph")
