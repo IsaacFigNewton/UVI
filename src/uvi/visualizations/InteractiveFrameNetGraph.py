@@ -5,260 +5,138 @@ This module contains the InteractiveFrameNetGraph class that provides interactiv
 FrameNet semantic graph visualizations with hover, click, and zoom functionality.
 """
 
-import networkx as nx
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Button
-import datetime
-import os
-
-from .FrameNetVisualizer import FrameNetVisualizer
+from .InteractiveVisualizer import InteractiveVisualizer
 
 
-class InteractiveFrameNetGraph(FrameNetVisualizer):
+class InteractiveFrameNetGraph(InteractiveVisualizer):
     """Interactive FrameNet graph visualization with hover, click, and zoom functionality."""
     
     def __init__(self, G, hierarchy, title="FrameNet Frame Hierarchy"):
         super().__init__(G, hierarchy, title)
-        self.fig = None
-        self.ax = None
-        self.pos = None
-        self.node_artists = None
-        self.annotation = None
-        self.selected_node = None
-        self.save_button = None
     
-    def on_hover(self, event):
-        """Handle mouse hover events."""
-        if event.inaxes != self.ax:
-            return
+    def get_dag_node_color(self, node):
+        """Get color for a node based on DAG properties and FrameNet node type."""
+        # Check if node has type information
+        node_data = self.G.nodes.get(node, {})
+        node_type = node_data.get('node_type', 'frame')
         
-        # Find the closest node within actual node boundaries
-        if self.pos and event.xdata is not None and event.ydata is not None:
-            closest_node = None
-            min_dist = float('inf')
-            
-            # Calculate appropriate hover threshold based on node size and axis limits
-            xlim = self.ax.get_xlim()
-            ylim = self.ax.get_ylim()
-            x_range = xlim[1] - xlim[0]
-            y_range = ylim[1] - ylim[0]
-            
-            # Node size in data coordinates (approximate radius)
-            # Default node_size is 2000, which roughly corresponds to this threshold
-            hover_threshold = min(x_range, y_range) * 0.05  # Much smaller threshold
-            
-            for node, (x, y) in self.pos.items():
-                dist = ((event.xdata - x) ** 2 + (event.ydata - y) ** 2) ** 0.5
-                if dist < hover_threshold:
-                    if dist < min_dist:
-                        min_dist = dist
-                        closest_node = node
-            
-            if closest_node and closest_node != self.selected_node:
-                # Show tooltip
-                self.show_tooltip(event.xdata, event.ydata, closest_node)
-            elif not closest_node:
-                self.hide_tooltip()
+        # Different colors for different FrameNet node types
+        if node_type == 'lexical_unit':
+            return 'lightyellow'  # Lexical units get yellow color
+        elif node_type == 'frame_element':
+            return 'lightpink'    # Frame elements get pink color
+        
+        # For frames, use DAG-based coloring
+        in_degree = self.G.in_degree(node)
+        out_degree = self.G.out_degree(node)
+        
+        if in_degree == 0 and out_degree > 0:
+            return 'lightblue'    # Source nodes (no parents)
+        elif in_degree > 0 and out_degree == 0:
+            return 'lightcoral'   # Sink nodes (no children)
+        elif in_degree > 0 and out_degree > 0:
+            return 'lightgreen'   # Intermediate nodes
+        else:
+            return 'lightgray'    # Isolated nodes
     
-    def on_click(self, event):
-        """Handle mouse click events."""
-        if event.inaxes != self.ax:
-            return
+    def get_node_info(self, node):
+        """Get detailed information about a FrameNet node."""
+        if node not in self.hierarchy:
+            return f"Node: {node}\nNo additional information available."
         
-        # Find clicked node using same precise detection as hover
-        if self.pos and event.xdata is not None and event.ydata is not None:
-            closest_node = None
-            min_dist = float('inf')
+        data = self.hierarchy[node]
+        frame_info = data.get('frame_info', {})
+        node_type = frame_info.get('node_type', 'frame')
+        
+        # Different display format for different FrameNet node types
+        if node_type == 'lexical_unit':
+            info = [f"Lexical Unit: {frame_info.get('name', node)}"]
+            info.append(f"Frame: {frame_info.get('frame', 'Unknown')}")
+            info.append(f"Depth: {data.get('depth', 'Unknown')}")
+            info.append(f"POS: {frame_info.get('pos', 'Unknown')}")
             
-            # Calculate appropriate click threshold based on node size and axis limits
-            xlim = self.ax.get_xlim()
-            ylim = self.ax.get_ylim()
-            x_range = xlim[1] - xlim[0]
-            y_range = ylim[1] - ylim[0]
+            definition = frame_info.get('definition', '')
+            if definition and len(definition.strip()) > 0:
+                if len(definition) > 100:
+                    definition = definition[:97] + "..."
+                info.append(f"Definition: {definition}")
+        elif node_type == 'frame_element':
+            info = [f"Frame Element: {frame_info.get('name', node)}"]
+            info.append(f"Frame: {frame_info.get('frame', 'Unknown')}")
+            info.append(f"Depth: {data.get('depth', 'Unknown')}")
+            info.append(f"Core Type: {frame_info.get('core_type', 'Unknown')}")
+            info.append(f"ID: {frame_info.get('id', 'Unknown')}")
             
-            # Same threshold as hover for consistency
-            click_threshold = min(x_range, y_range) * 0.05
+            definition = frame_info.get('definition', '')
+            if definition and len(definition.strip()) > 0:
+                if len(definition) > 100:
+                    definition = definition[:97] + "..."
+                info.append(f"Definition: {definition}")
+        else:
+            # Frame node
+            info = [f"Frame: {node}"]
+            info.append(f"Depth: {data.get('depth', 'Unknown')}")
             
-            for node, (x, y) in self.pos.items():
-                dist = ((event.xdata - x) ** 2 + (event.ydata - y) ** 2) ** 0.5
-                if dist < click_threshold:
-                    if dist < min_dist:
-                        min_dist = dist
-                        closest_node = node
+            parents = data.get('parents', [])
+            if parents:
+                # Limit parents display to avoid overly long tooltips
+                if len(parents) <= 3:
+                    info.append(f"Parents: {', '.join(parents)}")
+                elif len(parents) <= 6:
+                    info.append(f"Parents: {', '.join(parents[:3])}")
+                    info.append(f"  ... and {len(parents)-3} more")
+                else:
+                    # For nodes with many parents, just show count
+                    info.append(f"Parents: {len(parents)} parent nodes")
             
-            if closest_node:
-                self.select_node(closest_node)
-    
-    def show_tooltip(self, x, y, node):
-        """Show tooltip with node information."""
-        if self.annotation:
-            self.annotation.remove()
-        
-        info = self.get_node_info(node)
-        self.annotation = self.ax.annotate(
-            info,
-            xy=(x, y),
-            xytext=(20, 20),
-            textcoords="offset points",
-            bbox=dict(boxstyle="round,pad=0.5", fc="wheat", alpha=0.8),
-            arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=0"),
-            fontsize=9,
-            fontweight='normal'
-        )
-        self.fig.canvas.draw_idle()
-    
-    def hide_tooltip(self):
-        """Hide the tooltip."""
-        if self.annotation:
-            try:
-                self.annotation.set_visible(False)
-                self.fig.canvas.draw_idle()
-            except:
-                # If visibility toggle fails, try remove
-                try:
-                    self.annotation.remove()
-                except:
-                    pass
-            finally:
-                self.annotation = None
-    
-    def select_node(self, node):
-        """Select a node and highlight it."""
-        self.selected_node = node
-        print(f"\n=== Selected Frame: {node} ===")
-        print(self.get_node_info(node))
-        print("=" * 40)
-        
-        # Redraw with highlighted selection
-        self.draw_graph()
-    
-    def save_png(self, event=None):
-        """Save the current graph visualization as a PNG file."""
-        # Generate filename with timestamp
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"framenet_graph_{timestamp}.png"
-        
-        # Try to save in current directory, fall back to user's home directory
-        try:
-            # First try current directory
-            filepath = filename
-            self.fig.savefig(filepath, dpi=300, bbox_inches='tight', 
-                           facecolor='white', edgecolor='none')
-            print(f"Graph saved as: {os.path.abspath(filepath)}")
-        except (PermissionError, OSError):
-            try:
-                # Fall back to home directory
-                home_dir = os.path.expanduser("~")
-                filepath = os.path.join(home_dir, filename)
-                self.fig.savefig(filepath, dpi=300, bbox_inches='tight',
-                               facecolor='white', edgecolor='none')
-                print(f"Graph saved as: {filepath}")
-            except Exception as e:
-                print(f"Error saving graph: {e}")
-                print("Please check file permissions and available disk space")
-    
-    def get_node_color(self, node):
-        """Get color for a node based on DAG properties and selection state."""
-        if node == self.selected_node:
-            return 'red'  # Highlight selected node
-        
-        return self.get_dag_node_color(node)
-    
-    def draw_graph(self):
-        """Draw the graph with current state."""
-        self.ax.clear()
-        
-        # Color and size nodes based on type and selection
-        node_colors = [self.get_node_color(node) for node in self.G.nodes()]
-        node_sizes = []
-        
-        for node in self.G.nodes():
-            node_data = self.G.nodes.get(node, {})
-            node_type = node_data.get('node_type', 'frame')
+            children = data.get('children', [])
+            if children:
+                # Limit children display to avoid overly long tooltips
+                if len(children) <= 3:
+                    info.append(f"Children: {', '.join(children)}")
+                elif len(children) <= 6:
+                    info.append(f"Children: {', '.join(children[:3])}")
+                    info.append(f"  ... and {len(children)-3} more")
+                else:
+                    # For nodes with many children, just show count
+                    info.append(f"Children: {len(children)} child nodes")
             
-            if node == self.selected_node:
-                size = 3000  # Selected nodes are largest
-            elif node_type == 'lexical_unit':
-                size = 1000  # Lexical units are smaller
-            elif node_type == 'frame_element':
-                size = 800   # Frame elements are smallest
-            else:
-                size = 2000  # Frames are medium size
+            # Add frame definition if available
+            definition = frame_info.get('definition', '')
+            if definition and len(definition.strip()) > 0:
+                # Truncate long definitions for tooltip readability
+                if len(definition) > 80:
+                    definition = definition[:77] + "..."
+                info.append(f"Definition: {definition}")
+        
+        # Join and ensure tooltip doesn't become too long overall
+        result = '\n'.join(info)
+        if len(result) > 300:
+            # If tooltip is still too long, truncate and add notice
+            lines = result.split('\n')
+            truncated_lines = []
+            char_count = 0
             
-            node_sizes.append(size)
+            for line in lines:
+                if char_count + len(line) + 1 <= 280:  # Leave room for truncation notice
+                    truncated_lines.append(line)
+                    char_count += len(line) + 1
+                else:
+                    truncated_lines.append("... (tooltip truncated)")
+                    break
+            
+            result = '\n'.join(truncated_lines)
         
-        # Draw nodes
-        nx.draw_networkx_nodes(
-            self.G, self.pos,
-            node_color=node_colors,
-            node_size=node_sizes,
-            alpha=0.8,
-            ax=self.ax
-        )
-        
-        # Draw labels
-        nx.draw_networkx_labels(
-            self.G, self.pos,
-            font_size=8,
-            font_weight='bold',
-            ax=self.ax
-        )
-        
-        # Draw edges
-        nx.draw_networkx_edges(
-            self.G, self.pos,
-            edge_color='gray',
-            arrows=True,
-            arrowsize=20,
-            arrowstyle='->',
-            alpha=0.6,
-            ax=self.ax
-        )
-        
-        self.ax.set_title(self.title, fontsize=16, fontweight='bold')
-        self.ax.axis('off')
-        
-        # Add legend
+        return result
+    
+    def create_dag_legend(self):
+        """Create legend elements for FrameNet DAG visualization."""
         from matplotlib.patches import Patch
-        legend_elements = self.create_dag_legend()
-        legend_elements.append(Patch(facecolor='red', label='Selected Frame'))
-        self.ax.legend(handles=legend_elements, loc='upper right')
-    
-    def create_interactive_plot(self):
-        """Create the interactive matplotlib plot."""
-        # Create figure and axis
-        self.fig, self.ax = plt.subplots(figsize=(16, 12))
-        
-        # Create layout
-        self.pos = self.create_dag_layout()
-        
-        # Initial draw
-        self.draw_graph()
-        
-        # Connect interactive events
-        self.fig.canvas.mpl_connect('motion_notify_event', self.on_hover)
-        self.fig.canvas.mpl_connect('button_press_event', self.on_click)
-        
-        # Add navigation toolbar for zoom/pan and save button
-        plt.subplots_adjust(bottom=0.15)  # Make more room for button
-        
-        # Add save button
-        save_ax = plt.axes([0.81, 0.02, 0.15, 0.05])  # [left, bottom, width, height]
-        self.save_button = Button(save_ax, 'Save PNG', 
-                                 color='lightblue', hovercolor='lightgreen')
-        self.save_button.on_clicked(self.save_png)
-        
-        # Add instructions
-        instruction_text = (
-            "Instructions:\n"
-            "• Hover over nodes for detailed information\n"
-            "• Click on nodes to select and highlight them\n"
-            "• Use toolbar to zoom and pan\n"
-            "• Click 'Save PNG' to export current view\n"
-            "• Selected node info appears in console"
-        )
-        
-        self.fig.text(0.02, 0.02, instruction_text, fontsize=10, 
-                     bbox=dict(boxstyle="round,pad=0.5", facecolor="lightgray", alpha=0.8))
-        
-        return self.fig
+        return [
+            Patch(facecolor='lightblue', label='Source Frames (no parents)'),
+            Patch(facecolor='lightgreen', label='Intermediate Frames'),
+            Patch(facecolor='lightcoral', label='Sink Frames (no children)'),
+            Patch(facecolor='lightgray', label='Isolated Frames'),
+            Patch(facecolor='lightyellow', label='Lexical Units'),
+            Patch(facecolor='lightpink', label='Frame Elements')
+        ]

@@ -5,11 +5,14 @@ This module contains the WordNetVisualizer class for creating interactive
 WordNet semantic graph visualizations with specialized coloring and tooltips.
 """
 
-from .InteractiveFrameNetGraph import InteractiveFrameNetGraph
+from .InteractiveVisualizer import InteractiveVisualizer
 
 
-class WordNetVisualizer(InteractiveFrameNetGraph):
+class WordNetVisualizer(InteractiveVisualizer):
     """Specialized visualizer for WordNet semantic graphs."""
+    
+    def __init__(self, G, hierarchy, title="WordNet Semantic Graph"):
+        super().__init__(G, hierarchy, title)
     
     def get_dag_node_color(self, node):
         """Get color for a node based on type."""
