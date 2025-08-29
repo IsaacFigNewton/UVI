@@ -144,7 +144,7 @@ class TestFrameNetVisualizer(unittest.TestCase):
     def test_create_dag_legend(self):
         """Test DAG legend creation."""
         legend_elements = self.visualizer.create_dag_legend()
-        self.assertEqual(len(legend_elements), 5)  # Updated to include lexical units
+        self.assertEqual(len(legend_elements), 6)  # Updated to include lexical units and frame elements
         
         # Check that legend contains expected labels
         labels = [element.get_label() for element in legend_elements]
@@ -153,7 +153,8 @@ class TestFrameNetVisualizer(unittest.TestCase):
             'Intermediate Frames', 
             'Sink Frames (no children)',
             'Isolated Frames',
-            'Lexical Units'
+            'Lexical Units',
+            'Frame Elements'
         ]
         self.assertEqual(labels, expected_labels)
     
@@ -234,6 +235,7 @@ class TestInteractiveFrameNetGraph(unittest.TestCase):
         self.assertIsNone(self.interactive_graph.selected_node)
         self.assertIsNone(self.interactive_graph.fig)
         self.assertIsNone(self.interactive_graph.ax)
+        self.assertIsNone(self.interactive_graph.save_button)
     
     def test_get_node_color_selected(self):
         """Test node color when selected."""
@@ -277,6 +279,57 @@ class TestInteractiveFrameNetGraph(unittest.TestCase):
         self.assertEqual(mock_canvas.mpl_connect.call_count, 2)
         
         self.assertEqual(result, mock_fig)
+    
+    @patch('matplotlib.pyplot.subplots')
+    def test_save_button_creation(self, mock_subplots):
+        """Test save button creation in interactive plot."""
+        # Mock matplotlib components
+        mock_fig = MagicMock()
+        mock_ax = MagicMock()
+        mock_canvas = MagicMock()
+        mock_fig.canvas = mock_canvas
+        mock_subplots.return_value = (mock_fig, mock_ax)
+        
+        # Call create_interactive_plot (this will create the button)
+        result = self.interactive_graph.create_interactive_plot()
+        
+        # Verify that save_button attribute exists after plot creation
+        self.assertIsNotNone(self.interactive_graph.save_button)
+        
+        # Verify figure and axes were set up correctly
+        self.assertEqual(self.interactive_graph.fig, mock_fig)
+        self.assertEqual(self.interactive_graph.ax, mock_ax)
+    
+    @patch('builtins.print')
+    @patch('os.path.abspath')
+    def test_save_png_functionality(self, mock_abspath, mock_print):
+        """Test PNG save functionality."""
+        # Mock figure
+        mock_fig = MagicMock()
+        mock_fig.savefig = MagicMock()
+        self.interactive_graph.fig = mock_fig
+        
+        # Mock absolute path
+        mock_abspath.return_value = "/test/path/framenet_graph_test.png"
+        
+        # Call save_png
+        self.interactive_graph.save_png()
+        
+        # Verify savefig was called
+        mock_fig.savefig.assert_called_once()
+        
+        # Check that it was called with correct parameters
+        args, kwargs = mock_fig.savefig.call_args
+        self.assertIn('dpi', kwargs)
+        self.assertEqual(kwargs['dpi'], 300)
+        self.assertEqual(kwargs['bbox_inches'], 'tight')
+        self.assertEqual(kwargs['facecolor'], 'white')
+        self.assertEqual(kwargs['edgecolor'], 'none')
+        
+        # Verify success message was printed
+        mock_print.assert_called()
+        print_calls = [call.args[0] for call in mock_print.call_args_list]
+        self.assertTrue(any('Graph saved as:' in call for call in print_calls))
     
     def test_hide_tooltip(self):
         """Test tooltip hiding."""

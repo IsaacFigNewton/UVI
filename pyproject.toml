@@ -23,7 +23,7 @@ keywords = [
     "ontonotes",
     "wordnet",
     "corpus",
-    "semantic-analysis"
+    "semantic-analysis",
     "matplotlib",
     "plotly",
     "networkx"

@@ -7,6 +7,9 @@ FrameNet semantic graph visualizations with hover, click, and zoom functionality
 
 import networkx as nx
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Button
+import datetime
+import os
 
 from .FrameNetVisualizer import FrameNetVisualizer
 
@@ -22,6 +25,7 @@ class InteractiveFrameNetGraph(FrameNetVisualizer):
         self.node_artists = None
         self.annotation = None
         self.selected_node = None
+        self.save_button = None
     
     def on_hover(self, event):
         """Handle mouse hover events."""
@@ -128,6 +132,31 @@ class InteractiveFrameNetGraph(FrameNetVisualizer):
         # Redraw with highlighted selection
         self.draw_graph()
     
+    def save_png(self, event=None):
+        """Save the current graph visualization as a PNG file."""
+        # Generate filename with timestamp
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"framenet_graph_{timestamp}.png"
+        
+        # Try to save in current directory, fall back to user's home directory
+        try:
+            # First try current directory
+            filepath = filename
+            self.fig.savefig(filepath, dpi=300, bbox_inches='tight', 
+                           facecolor='white', edgecolor='none')
+            print(f"Graph saved as: {os.path.abspath(filepath)}")
+        except (PermissionError, OSError):
+            try:
+                # Fall back to home directory
+                home_dir = os.path.expanduser("~")
+                filepath = os.path.join(home_dir, filename)
+                self.fig.savefig(filepath, dpi=300, bbox_inches='tight',
+                               facecolor='white', edgecolor='none')
+                print(f"Graph saved as: {filepath}")
+            except Exception as e:
+                print(f"Error saving graph: {e}")
+                print("Please check file permissions and available disk space")
+    
     def get_node_color(self, node):
         """Get color for a node based on DAG properties and selection state."""
         if node == self.selected_node:
@@ -210,8 +239,14 @@ class InteractiveFrameNetGraph(FrameNetVisualizer):
         self.fig.canvas.mpl_connect('motion_notify_event', self.on_hover)
         self.fig.canvas.mpl_connect('button_press_event', self.on_click)
         
-        # Add navigation toolbar for zoom/pan
-        plt.subplots_adjust(bottom=0.1)
+        # Add navigation toolbar for zoom/pan and save button
+        plt.subplots_adjust(bottom=0.15)  # Make more room for button
+        
+        # Add save button
+        save_ax = plt.axes([0.81, 0.02, 0.15, 0.05])  # [left, bottom, width, height]
+        self.save_button = Button(save_ax, 'Save PNG', 
+                                 color='lightblue', hovercolor='lightgreen')
+        self.save_button.on_clicked(self.save_png)
         
         # Add instructions
         instruction_text = (
@@ -219,6 +254,7 @@ class InteractiveFrameNetGraph(FrameNetVisualizer):
             "• Hover over nodes for detailed information\n"
             "• Click on nodes to select and highlight them\n"
             "• Use toolbar to zoom and pan\n"
+            "• Click 'Save PNG' to export current view\n"
             "• Selected node info appears in console"
         )
         
