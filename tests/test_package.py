@@ -124,8 +124,11 @@ def test_uvi_initialization():
     try:
         from uvi import UVI
         
+        # Get the corpora path relative to the test file location
+        corpora_path = Path(__file__).parent.parent / 'corpora'
+        
         # Test basic initialization (without loading)
-        uvi = UVI(corpora_path='corpora', load_all=False)
+        uvi = UVI(corpora_path=str(corpora_path), load_all=False)
         print("[PASS] UVI initialization works")
         
         # Test basic methods

@@ -11,7 +11,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from uvi.CorpusLoader import CorpusLoader
+from uvi.corpus_loader import CorpusLoader
 
 
 def main():
