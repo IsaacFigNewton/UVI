@@ -310,7 +310,7 @@ class TestCorpusCollectionAnalyzer(unittest.TestCase):
         # Should be empty dict since no 'statistics' key exists
         self.assertEqual(statistics['another_corpus'], {})
     
-    @patch('uvi.CorpusCollectionAnalyzer.datetime')
+    @patch('uvi.corpus_loader.CorpusCollectionAnalyzer.datetime')
     def test_get_build_metadata(self, mock_datetime):
         """Test get_build_metadata method."""
         # Mock the datetime to return a known value

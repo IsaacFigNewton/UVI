@@ -142,7 +142,12 @@ class WordNetParser:
         with open(file_path, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith('  '):  # Skip comments and empty lines
+                # Skip comments, empty lines, and copyright headers
+                if (line and 
+                    not line.startswith('  ') and 
+                    not line.startswith('Princeton') and 
+                    not line.startswith('Copyright') and
+                    not 'Princeton' in line):
                     synset_data = self._parse_synset_line(line, pos)
                     if synset_data:
                         synsets[synset_data['synset_offset']] = synset_data
@@ -249,7 +254,12 @@ class WordNetParser:
         with open(file_path, 'r', encoding='utf-8') as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith('  '):  # Skip comments and empty lines
+                # Skip comments, empty lines, and copyright headers
+                if (line and 
+                    not line.startswith('  ') and 
+                    not line.startswith('Princeton') and 
+                    not line.startswith('Copyright') and
+                    not 'Princeton' in line):
                     index_entry = self._parse_index_line(line, pos)
                     if index_entry:
                         index[index_entry['lemma']] = index_entry
@@ -282,8 +292,14 @@ class WordNetParser:
             
             # Parse sense count and tagged sense count
             sense_cnt_idx = 4 + p_cnt
-            sense_cnt = int(parts[sense_cnt_idx]) if sense_cnt_idx < len(parts) else 0
-            tagsense_cnt = int(parts[sense_cnt_idx + 1]) if sense_cnt_idx + 1 < len(parts) else 0
+            try:
+                sense_cnt = int(parts[sense_cnt_idx]) if sense_cnt_idx < len(parts) else 0
+            except (ValueError, IndexError):
+                sense_cnt = 0
+            try:
+                tagsense_cnt = int(parts[sense_cnt_idx + 1]) if sense_cnt_idx + 1 < len(parts) else 0
+            except (ValueError, IndexError):
+                tagsense_cnt = 0
             
             # Parse synset offsets
             synset_offsets = parts[sense_cnt_idx + 2:sense_cnt_idx + 2 + synset_cnt]

@@ -18,6 +18,11 @@ class FrameNetParser:
     relations, and full-text annotations.
     """
     
+    # FrameNet namespace mapping
+    NAMESPACES = {
+        'fn': 'http://framenet.icsi.berkeley.edu'
+    }
+    
     def __init__(self, corpus_path: Path):
         """
         Initialize FrameNet parser with corpus path.
@@ -27,6 +32,72 @@ class FrameNetParser:
         """
         self.corpus_path = corpus_path
         self.frame_dir = corpus_path / "frame" if corpus_path else None
+        
+    def _strip_namespace(self, tag: str) -> str:
+        """
+        Strip namespace from XML tag.
+        
+        Args:
+            tag (str): XML tag with or without namespace
+            
+        Returns:
+            str: Tag without namespace
+        """
+        if '}' in tag:
+            return tag.split('}')[1]
+        return tag
+    
+    def _get_namespaced_tag(self, tag: str) -> str:
+        """
+        Get the expected namespaced tag for FrameNet XML.
+        
+        Args:
+            tag (str): Base tag name
+            
+        Returns:
+            str: Namespaced tag
+        """
+        return f"{{{self.NAMESPACES['fn']}}}{tag}"
+    
+    def _find_element(self, parent: ET.Element, tag: str) -> Optional[ET.Element]:
+        """
+        Find child element handling both namespaced and non-namespaced XML.
+        
+        Args:
+            parent (ET.Element): Parent element to search in
+            tag (str): Tag name to search for
+            
+        Returns:
+            Optional[ET.Element]: Found element or None
+        """
+        # Try without namespace first
+        element = parent.find(f".//{tag}")
+        if element is not None:
+            return element
+            
+        # Try with namespace
+        namespaced_tag = self._get_namespaced_tag(tag)
+        return parent.find(f".//{namespaced_tag}")
+    
+    def _find_elements(self, parent: ET.Element, tag: str) -> List[ET.Element]:
+        """
+        Find all child elements handling both namespaced and non-namespaced XML.
+        
+        Args:
+            parent (ET.Element): Parent element to search in
+            tag (str): Tag name to search for
+            
+        Returns:
+            List[ET.Element]: List of found elements
+        """
+        # Try without namespace first
+        elements = parent.findall(f".//{tag}")
+        if elements:
+            return elements
+            
+        # Try with namespace
+        namespaced_tag = self._get_namespaced_tag(tag)
+        return parent.findall(f".//{namespaced_tag}")
         
     def parse_all_frames(self) -> Dict[str, Any]:
         """
@@ -85,7 +156,9 @@ class FrameNetParser:
             tree = ET.parse(file_path)
             root = tree.getroot()
             
-            if root.tag == 'frame':
+            # Handle both namespaced and non-namespaced XML
+            root_tag = self._strip_namespace(root.tag)
+            if root_tag == 'frame':
                 return self._parse_frame_element(root)
             else:
                 print(f"Unexpected root element {root.tag} in {file_path}")
@@ -108,7 +181,7 @@ class FrameNetParser:
             'name': frame_element.get('name', ''),
             'ID': frame_element.get('ID', ''),
             'attributes': dict(frame_element.attrib),
-            'definition': self._extract_text_content(frame_element.find('.//definition')),
+            'definition': self._extract_text_content(self._find_element(frame_element, 'definition')),
             'frame_elements': self._parse_frame_elements(frame_element),
             'lexical_units': self._parse_lexical_units(frame_element),
             'frame_relations': self._parse_frame_relations_in_frame(frame_element),
@@ -121,7 +194,7 @@ class FrameNetParser:
         """Parse FE (Frame Element) elements from a frame."""
         frame_elements = []
         
-        for fe in frame_element.findall('.//FE'):
+        for fe in self._find_elements(frame_element, 'FE'):
             fe_data = {
                 'name': fe.get('name', ''),
                 'ID': fe.get('ID', ''),

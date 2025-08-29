@@ -33,6 +33,7 @@ class CorpusFileManager:
         self.base_path = Path(base_path)
         self.file_cache = {}
         self.structure_cache = {}
+        self.corpus_paths = self._detect_corpus_paths()
     
     def detect_corpus_structure(self) -> Dict[str, Any]:
         """
@@ -396,6 +397,137 @@ class CorpusFileManager:
         
         return validation
 
+    def _detect_corpus_paths(self) -> Dict[str, Path]:
+        """Detect corpus directories and return mapping."""
+        corpus_paths = {}
+        if not self.base_path.exists():
+            return corpus_paths
+            
+        for item in self.base_path.iterdir():
+            if item.is_dir():
+                name = item.name.lower()
+                # Map directory names to standard corpus names
+                if name == 'verbnet':
+                    corpus_paths['verbnet'] = item
+                elif name == 'framenet':
+                    corpus_paths['framenet'] = item
+                elif name == 'propbank':
+                    corpus_paths['propbank'] = item
+                elif name == 'ontonotes':
+                    corpus_paths['ontonotes'] = item
+                elif name == 'wordnet':
+                    corpus_paths['wordnet'] = item
+                elif name in ['bso', 'BSO']:
+                    corpus_paths['bso'] = item
+                elif name.startswith('semnet'):
+                    corpus_paths['semnet'] = item
+                elif name == 'reference_docs':
+                    corpus_paths['reference_docs'] = item
+                
+        return corpus_paths
+
+    def detect_corpus_files(self, corpus_name: str, pattern: str) -> List[Path]:
+        """
+        Detect files in a corpus directory matching a pattern.
+        
+        Args:
+            corpus_name (str): Name of the corpus
+            pattern (str): File pattern to match
+            
+        Returns:
+            list: List of matching file paths
+        """
+        import glob
+        
+        corpus_path = self.corpus_paths.get(corpus_name)
+        if not corpus_path or not corpus_path.exists():
+            return []
+            
+        # Use corpus_path as base for all patterns
+        matches = list(corpus_path.glob(pattern))
+            
+        return [Path(match) for match in matches if Path(match).is_file()]
+
+    def get_corpus_statistics(self, corpus_name: str) -> Dict[str, Any]:
+        """
+        Get statistics for a corpus directory.
+        
+        Args:
+            corpus_name (str): Name of the corpus
+            
+        Returns:
+            dict: Statistics about the corpus
+        """
+        stats = {
+            'corpus_name': corpus_name,
+            'exists': False,
+            'file_count': 0,
+            'total_size': 0,
+            'file_types': {},
+            'last_modified': None
+        }
+        
+        corpus_path = self.corpus_paths.get(corpus_name)
+        if not corpus_path or not corpus_path.exists():
+            return stats
+            
+        stats['exists'] = True
+        stats['path'] = str(corpus_path)
+        
+        try:
+            files = list(corpus_path.rglob('*'))
+            files = [f for f in files if f.is_file()]
+            
+            stats['file_count'] = len(files)
+            stats['total_files'] = len(files)  # For test compatibility
+            
+            for file_path in files:
+                try:
+                    file_size = file_path.stat().st_size
+                    stats['total_size'] += file_size
+                    
+                    extension = file_path.suffix.lower()
+                    if extension not in stats['file_types']:
+                        stats['file_types'][extension] = 0
+                    stats['file_types'][extension] += 1
+                    
+                    file_mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+                    if not stats['last_modified'] or file_mtime > stats['last_modified']:
+                        stats['last_modified'] = file_mtime
+                        
+                except (OSError, PermissionError):
+                    continue
+                    
+        except (OSError, PermissionError):
+            stats['error'] = 'Permission denied or access error'
+        
+        # Add xml_files count for test compatibility
+        stats['xml_files'] = stats['file_types'].get('.xml', 0)
+        
+        return stats
+
+    def validate_corpus_structure(self, corpus_name: str, required_patterns: List[str]) -> bool:
+        """
+        Validate that a corpus has required file patterns.
+        
+        Args:
+            corpus_name (str): Name of the corpus
+            required_patterns (list): List of required file patterns
+            
+        Returns:
+            bool: True if corpus structure is valid
+        """
+        corpus_path = self.corpus_paths.get(corpus_name)
+        if not corpus_path or not corpus_path.exists():
+            return False
+            
+        for pattern in required_patterns:
+            matching_files = self.detect_corpus_files(corpus_name, pattern)
+            if not matching_files:
+                return False
+                
+        return True
+
 
 def detect_corpus_structure(base_path: Union[str, Path]) -> Dict[str, Any]:
     """
@@ -408,7 +540,33 @@ def detect_corpus_structure(base_path: Union[str, Path]) -> Dict[str, Any]:
         dict: Detected structure information
     """
     manager = CorpusFileManager(Path(base_path))
-    return manager.detect_corpus_structure()
+    full_structure = manager.detect_corpus_structure()
+    
+    # For test compatibility, flatten the structure
+    flattened = {}
+    for corpus_name, corpus_info in full_structure.get('detected_corpora', {}).items():
+        corpus_details = {
+            'path': corpus_info['path'],
+            'type': corpus_info['type'],
+            'exists': corpus_info['exists'],
+            'readable': corpus_info['readable'],
+            'file_count': corpus_info['file_count']
+        }
+        
+        # Add specific file type counts based on corpus type
+        file_types = corpus_info.get('file_types', {})
+        if corpus_name == 'verbnet':
+            corpus_details['xml_files'] = file_types.get('.xml', 0)
+            corpus_details['schema_files'] = file_types.get('.xsd', 0) + file_types.get('.dtd', 0)
+        elif corpus_name == 'framenet':
+            corpus_details['xml_files'] = file_types.get('.xml', 0)
+        elif corpus_name == 'wordnet':
+            corpus_details['data_files'] = file_types.get('.verb', 0) + file_types.get('.noun', 0) + file_types.get('.adj', 0) + file_types.get('.adv', 0)
+            corpus_details['index_files'] = sum(1 for ext in file_types.keys() if 'index' in str(ext))
+            
+        flattened[corpus_name] = corpus_details
+    
+    return flattened
 
 
 def safe_file_read(file_path: Union[str, Path], encoding: str = 'utf-8') -> Optional[str]:

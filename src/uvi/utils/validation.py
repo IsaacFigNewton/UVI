@@ -51,7 +51,7 @@ class SchemaValidator:
         if not schema_file or not schema_file.exists():
             return {
                 'valid': None,
-                'errors': ['Schema file not found'],
+                'error': 'Schema file not found',
                 'warnings': []
             }
         
@@ -62,7 +62,7 @@ class SchemaValidator:
         else:
             return {
                 'valid': False,
-                'errors': [f'Unsupported schema format: {schema_file.suffix}'],
+                'error': f'Unsupported schema format: {schema_file.suffix}',
                 'warnings': []
             }
     
@@ -141,27 +141,27 @@ class SchemaValidator:
             if not schema_file or not schema_file.exists():
                 return {
                     'valid': True,
-                    'errors': [],
+                    'error': None,
                     'warnings': ['No schema file provided - only syntax validation performed']
                 }
             
             # TODO: Implement JSON schema validation if needed
             return {
                 'valid': True,
-                'errors': [],
+                'error': None,
                 'warnings': ['JSON schema validation not implemented']
             }
             
         except json.JSONDecodeError as e:
             return {
                 'valid': False,
-                'errors': [f'JSON syntax error: {e}'],
+                'error': f'JSON syntax error: {e}',
                 'warnings': []
             }
         except Exception as e:
             return {
                 'valid': False,
-                'errors': [f'Error validating JSON file: {e}'],
+                'error': f'Error validating JSON file: {e}',
                 'warnings': []
             }
     
@@ -179,19 +179,19 @@ class SchemaValidator:
             ET.parse(xml_file)
             return {
                 'valid': True,
-                'errors': [],
+                'error': None,
                 'warnings': ['No schema validation - only well-formedness checked']
             }
         except ET.ParseError as e:
             return {
                 'valid': False,
-                'errors': [f'XML parse error: {e}'],
+                'error': f'XML parse error: {e}',
                 'warnings': []
             }
         except Exception as e:
             return {
                 'valid': False,
-                'errors': [f'Error validating XML file: {e}'],
+                'error': f'Error validating XML file: {e}',
                 'warnings': []
             }
     
@@ -240,7 +240,7 @@ def validate_xml_against_dtd(xml_file: Path, dtd_file: Path) -> Dict[str, Any]:
     if etree is None:
         return {
             'valid': None,
-            'errors': ['lxml library not available for DTD validation'],
+            'error': 'lxml not available for DTD validation',
             'warnings': []
         }
         
@@ -255,21 +255,22 @@ def validate_xml_against_dtd(xml_file: Path, dtd_file: Path) -> Dict[str, Any]:
         
         # Validate
         is_valid = dtd.validate(xml_doc)
-        errors = []
+        error = None
         
         if not is_valid:
-            errors = [str(error) for error in dtd.error_log]
+            error_list = [str(error) for error in dtd.error_log]
+            error = '; '.join(error_list) if error_list else 'Validation failed'
         
         return {
             'valid': is_valid,
-            'errors': errors,
+            'error': error,
             'warnings': []
         }
         
     except Exception as e:
         return {
             'valid': False,
-            'errors': [f'DTD validation error: {e}'],
+            'error': f'DTD validation error: {e}',
             'warnings': []
         }
 
@@ -288,7 +289,7 @@ def validate_xml_against_xsd(xml_file: Path, xsd_file: Path) -> Dict[str, Any]:
     if etree is None:
         return {
             'valid': None,
-            'errors': ['lxml library not available for XSD validation'],
+            'error': 'lxml library not available for XSD validation',
             'warnings': []
         }
         
@@ -304,21 +305,22 @@ def validate_xml_against_xsd(xml_file: Path, xsd_file: Path) -> Dict[str, Any]:
         
         # Validate
         is_valid = schema.validate(xml_doc)
-        errors = []
+        error = None
         
         if not is_valid:
-            errors = [str(error) for error in schema.error_log]
+            error_list = [str(error) for error in schema.error_log]
+            error = '; '.join(error_list) if error_list else 'Validation failed'
         
         return {
             'valid': is_valid,
-            'errors': errors,
+            'error': error,
             'warnings': []
         }
         
     except Exception as e:
         return {
             'valid': False,
-            'errors': [f'XSD validation error: {e}'],
+            'error': f'XSD validation error: {e}',
             'warnings': []
         }
 
@@ -376,7 +378,7 @@ def validate_corpus_files(corpus_path: Path, corpus_type: str) -> Dict[str, Any]
             elif corpus_type in ['semnet', 'reference_docs']:
                 file_result = validator.validate_json_file(file_path)
             else:
-                file_result = {'valid': None, 'errors': ['Unknown corpus type'], 'warnings': []}
+                file_result = {'valid': None, 'error': 'Unknown corpus type', 'warnings': []}
             
             results['file_results'][str(file_path)] = file_result
             
@@ -388,7 +390,7 @@ def validate_corpus_files(corpus_path: Path, corpus_type: str) -> Dict[str, Any]
         except Exception as e:
             results['file_results'][str(file_path)] = {
                 'valid': False,
-                'errors': [f'Validation error: {e}'],
+                'error': f'Validation error: {e}',
                 'warnings': []
             }
             results['invalid_files'] += 1

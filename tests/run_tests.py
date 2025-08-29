@@ -306,7 +306,7 @@ class UVITestRunner:
         cmd = ['python', '-m', 'pytest']
         
         if coverage and COVERAGE_AVAILABLE:
-            cmd.extend(['--cov=src.uvi', '--cov-report=term-missing'])
+            cmd.extend(['--cov=uvi', '--cov-report=term-missing'])
         
         if verbose:
             cmd.append('-v')

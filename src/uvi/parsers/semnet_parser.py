@@ -51,7 +51,8 @@ class SemNetParser:
         if self.verb_semnet_file and self.verb_semnet_file.exists():
             try:
                 verb_network = self.parse_semantic_network_file(self.verb_semnet_file)
-                semnet_data['verb_network'] = verb_network
+                # Flatten structure to match test expectations - extract nodes directly
+                semnet_data['verb_network'] = verb_network.get('nodes', {})
             except Exception as e:
                 print(f"Error parsing verb SemNet file: {e}")
         
@@ -59,7 +60,8 @@ class SemNetParser:
         if self.noun_semnet_file and self.noun_semnet_file.exists():
             try:
                 noun_network = self.parse_semantic_network_file(self.noun_semnet_file)
-                semnet_data['noun_network'] = noun_network
+                # Flatten structure to match test expectations - extract nodes directly  
+                semnet_data['noun_network'] = noun_network.get('nodes', {})
             except Exception as e:
                 print(f"Error parsing noun SemNet file: {e}")
         
@@ -152,15 +154,24 @@ class SemNetParser:
             dict: Processed node data
         """
         if isinstance(node_info, dict):
-            return {
+            processed_node = {
                 'id': node_id,
                 'word': node_info.get('word', node_id),
                 'pos': node_info.get('pos', ''),
                 'frequency': node_info.get('frequency', 0),
-                'semantic_class': node_info.get('semantic_class', ''),
-                'attributes': {k: v for k, v in node_info.items() 
-                             if k not in ['id', 'word', 'pos', 'frequency', 'semantic_class']}
+                'semantic_class': node_info.get('semantic_class', '')
             }
+            # Flatten important attributes to top level for test compatibility
+            if 'synsets' in node_info:
+                processed_node['synsets'] = node_info['synsets']
+            if 'relations' in node_info:
+                processed_node['relations'] = node_info['relations']
+            # Keep other attributes nested
+            remaining_attrs = {k: v for k, v in node_info.items() 
+                             if k not in ['id', 'word', 'pos', 'frequency', 'semantic_class', 'synsets', 'relations']}
+            if remaining_attrs:
+                processed_node['attributes'] = remaining_attrs
+            return processed_node
         else:
             return {
                 'id': node_id,

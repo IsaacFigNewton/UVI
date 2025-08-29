@@ -24,16 +24,17 @@ from typing import Dict, List, Any
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+# Add src directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from src.uvi.parsers.verbnet_parser import VerbNetParser
-from src.uvi.parsers.framenet_parser import FrameNetParser
-from src.uvi.parsers.propbank_parser import PropBankParser
-from src.uvi.parsers.ontonotes_parser import OntoNotesParser
-from src.uvi.parsers.wordnet_parser import WordNetParser
-from src.uvi.parsers.bso_parser import BSOParser
-from src.uvi.parsers.semnet_parser import SemNetParser
-from src.uvi.parsers.reference_parser import ReferenceParser
+from uvi.parsers.verbnet_parser import VerbNetParser
+from uvi.parsers.framenet_parser import FrameNetParser
+from uvi.parsers.propbank_parser import PropBankParser
+from uvi.parsers.ontonotes_parser import OntoNotesParser
+from uvi.parsers.wordnet_parser import WordNetParser
+from uvi.parsers.bso_parser import BSOParser
+from uvi.parsers.semnet_parser import SemNetParser
+from uvi.parsers.reference_parser import ReferenceParser
 
 
 class TestVerbNetParser(unittest.TestCase):

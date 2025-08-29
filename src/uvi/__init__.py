@@ -27,6 +27,23 @@ from . import corpus_loader
 from . import parsers
 from . import utils
 
+# Import parsers for backward compatibility
+from .parsers import (
+    VerbNetParser, FrameNetParser, PropBankParser, OntoNotesParser,
+    WordNetParser, BSOParser, SemNetParser, ReferenceParser, VNAPIParser
+)
+
+# Import corpus loader classes
+from .corpus_loader import (
+    CorpusCollectionAnalyzer, CorpusCollectionBuilder, CorpusCollectionValidator,
+    CorpusLoader as CorpusLoaderClass, CorpusParser
+)
+
+# Import utils classes
+from .utils import (
+    SchemaValidator, CrossReferenceManager, CorpusFileManager
+)
+
 # Package metadata
 SUPPORTED_CORPORA = [
     'verbnet', 'framenet', 'propbank', 'ontonotes', 'wordnet',

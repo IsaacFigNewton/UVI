@@ -18,23 +18,23 @@ def test_basic_imports():
         print("[PASS] Successfully imported UVI class")
     except ImportError as e:
         print(f"[FAIL] Failed to import UVI class: {e}")
-        return False
+        assert False, f"Failed to import UVI class: {e}"
     
     try:
         from uvi import parsers
         print("[PASS] Successfully imported parsers package")
     except ImportError as e:
         print(f"[FAIL] Failed to import parsers package: {e}")
-        return False
+        assert False, f"Failed to import parsers package: {e}"
     
     try:
         from uvi import utils
         print("[PASS] Successfully imported utils package")
     except ImportError as e:
         print(f"[FAIL] Failed to import utils package: {e}")
-        return False
+        assert False, f"Failed to import utils package: {e}"
     
-    return True
+    # Test passed
 
 def test_parser_imports():
     """Test that individual parser imports work."""
@@ -62,7 +62,7 @@ def test_parser_imports():
             print(f"[FAIL] Failed to import {parser_name}: {e}")
     
     print(f"Parser imports: {success_count}/{len(parsers_to_test)} successful")
-    return success_count == len(parsers_to_test)
+    assert success_count == len(parsers_to_test), f"Only {success_count}/{len(parsers_to_test)} parser imports successful"
 
 def test_corpus_loader_imports():
     """Test that corpus_loader imports work."""
@@ -73,7 +73,7 @@ def test_corpus_loader_imports():
         print("[PASS] Successfully imported corpus_loader package")
     except ImportError as e:
         print(f"[FAIL] Failed to import corpus_loader package: {e}")
-        return False
+        assert False, f"Failed to import corpus_loader package: {e}"
     
     corpus_classes_to_test = [
         'CorpusLoader',
@@ -93,7 +93,7 @@ def test_corpus_loader_imports():
             print(f"[FAIL] Failed to import {class_name}: {e}")
     
     print(f"Corpus loader imports: {success_count}/{len(corpus_classes_to_test)} successful")
-    return success_count == len(corpus_classes_to_test)
+    assert success_count == len(corpus_classes_to_test), f"Only {success_count}/{len(corpus_classes_to_test)} corpus loader imports successful"
 
 def test_utils_imports():
     """Test that utility imports work."""
@@ -115,7 +115,7 @@ def test_utils_imports():
             print(f"[FAIL] Failed to import {util_name}: {e}")
     
     print(f"Utils imports: {success_count}/{len(utils_to_test)} successful")
-    return success_count == len(utils_to_test)
+    assert success_count == len(utils_to_test), f"Only {success_count}/{len(utils_to_test)} utils imports successful"
 
 def test_uvi_initialization():
     """Test that UVI class can be initialized."""
@@ -139,11 +139,11 @@ def test_uvi_initialization():
         profile = uvi.get_complete_semantic_profile('test')
         print(f"[PASS] get_complete_semantic_profile method exists")
         
-        return True
+        # Test passed
         
     except Exception as e:
         print(f"[FAIL] UVI initialization failed: {e}")
-        return False
+        assert False, f"UVI initialization failed: {e}"
 
 def test_package_metadata():
     """Test package metadata."""
@@ -158,11 +158,11 @@ def test_package_metadata():
         supported_corpora = get_supported_corpora()
         print(f"[PASS] Supported corpora: {len(supported_corpora)} types")
         
-        return True
+        # Test passed
         
     except Exception as e:
         print(f"[FAIL] Package metadata test failed: {e}")
-        return False
+        assert False, f"Package metadata test failed: {e}"
 
 def main():
     """Run all tests."""
@@ -183,8 +183,11 @@ def main():
     total = len(tests)
     
     for test in tests:
-        if test():
+        try:
+            test()
             passed += 1
+        except AssertionError as e:
+            print(f"[FAIL] {test.__name__}: {e}")
         print()
     
     print("=" * 50)

@@ -1,222 +1,187 @@
-# CorpusLoader Refactoring Plan
+# UVI Package Comprehensive Debugging and Fixing Strategy
 
-## Overview
-Refactor the monolithic CorpusLoader class (1863 lines) into 5 specialized classes:
-1. **CorpusLoader** - Main orchestrator class
-2. **CorpusParser** - Parsing methods for all corpus types
-3. **CorpusCollectionBuilder** - Reference data building methods
-4. **CorpusCollectionValidator** - Validation methods
-5. **CorpusCollectionAnalyzer** - Statistics and metadata methods
+## Current Test Status
+- **Total tests**: 295
+- **Failed**: 47 tests
+- **Passed**: 241 tests  
+- **Skipped**: 7 tests
 
-## File Structure
+## Key Issues Identified
+
+### 1. Import Structure Issues (Critical Priority)
+- Tests expect parsers directly from UVI module but they're in separate submodules
+- Pattern: `from src.uvi.UVI import VerbNetParser` but VerbNetParser is in `src.uvi.parsers.verbnet_parser`
+- Mock/patch statements reference non-existent module paths
+
+### 2. Constructor/API Mismatch (Critical Priority)
+- `CrossReferenceManager.__init__()` takes 1 argument but tests pass 2
+- Tests assume different API than implemented
+
+### 3. XML Namespace Issues (High Priority)
+- FrameNet parser: "Unexpected root element {http://framenet.icsi.berkeley.edu}frame"
+- XML parsing doesn't handle namespaces properly
+
+### 4. Placeholder Tests (Medium Priority)
+- Many methods end with "_placeholder" - intentionally unimplemented
+- Need triage: implement, defer, or remove
+
+### 5. Mock/Patch Structure Issues (Medium Priority)
+- Mocks expect different module structure than exists
+- Tests failing on AttributeError for missing attributes
+
+## Refined Debugging Strategy
+
+### Phase 0: Diagnostic Deep Dive (NEW - Critical Foundation)
+
+#### 0.1 Failure Pattern Analysis
+```bash
+# Categorize all 47 failures by error type
+pytest --tb=line > failure_analysis.txt
+# Create failure_categories.txt with groupings:
+# - Import errors
+# - Constructor mismatches  
+# - XML namespace issues
+# - Placeholder tests
+# - Mock/patch issues
 ```
-src/uvi/
-├── CorpusLoader.py (main class)
-├── CorpusParser.py
-├── CorpusCollectionBuilder.py
-├── CorpusCollectionValidator.py
-└── CorpusCollectionAnalyzer.py
-```
 
-## Detailed Refactoring Plan
+#### 0.2 Module Architecture Audit  
+- Map expected vs actual import paths
+- Create visual diagram of current vs expected module structure
+- Document all discrepancies between test expectations and implementation
 
-### 1. Create CorpusParser.py
-**Purpose**: Extract all parsing methods into a dedicated parser class
+#### 0.3 Test Coverage Gap Analysis
+- Identify what functionality exists vs what's tested
+- Distinguish between broken tests vs missing functionality
+- Create priority matrix for fixes
 
-**Methods to Move** (lines 187-1452):
-- `parse_verbnet_files()` (187-250)
-- `_parse_verbnet_class()` (252-381)
-- `_parse_verbnet_subclass()` (383-432)
-- `_extract_frame_description()` (434-450)
-- `_build_verbnet_hierarchy()` (452-503)
-- `parse_framenet_files()` (505-557)
-- `_parse_framenet_frame_index()` (559-589)
-- `_parse_framenet_frame()` (591-659)
-- `_parse_framenet_lu_index()` (661-690)
-- `_parse_framenet_relations()` (692-734)
-- `parse_propbank_files()` (736-786)
-- `_parse_propbank_frame()` (788-859)
-- `parse_ontonotes_files()` (861-900)
-- `_parse_ontonotes_data()` (902-957)
-- `parse_wordnet_files()` (959-1024)
-- `_parse_wordnet_data_file()` (1026-1077)
-- `_parse_wordnet_index_file()` (1079-1134)
-- `_parse_wordnet_exception_file()` (1136-1158)
-- `parse_bso_mappings()` (1160-1229)
-- `load_bso_mappings()` (1231-1252)
-- `apply_bso_mappings()` (1254-1272)
-- `parse_semnet_data()` (1274-1320)
-- `parse_reference_docs()` (1322-1402)
-- `_parse_tsv_file()` (1404-1423)
-- `parse_vn_api_files()` (1425-1452)
+### Phase 1: Structural Foundation (Critical Priority)
 
-**Required Changes**:
-- Create class with `__init__` that accepts corpus_paths and logger
-- All methods remain the same but reference `self.corpus_paths` and `self.logger`
-- Return parsed data to CorpusLoader
+#### 1.1 Fix Module Exposure
+- Update all `__init__.py` files to properly export classes
+- Ensure `src/uvi/__init__.py` exposes parsers if backward compatibility needed
+- Standardize import patterns across entire codebase
+- Create import verification tests to prevent future regressions
 
-### 2. Create CorpusCollectionBuilder.py
-**Purpose**: Extract reference collection building methods
+#### 1.2 Constructor/API Alignment
+- Review all class constructors vs test expectations  
+- **Decision point**: Update constructors to match tests OR update tests to match implementation
+- Document API decisions for consistency
+- Update docstrings to match actual implementation
 
-**Methods to Move** (lines 1454-1613):
-- `build_reference_collections()` (1456-1473)
-- `build_predicate_definitions()` (1475-1495)
-- `build_themrole_definitions()` (1497-1517)
-- `build_verb_specific_features()` (1519-1553)
-- `build_syntactic_restrictions()` (1555-1584)
-- `build_selectional_restrictions()` (1586-1613)
-
-**Required Changes**:
-- Create class with `__init__` that accepts loaded_data and logger
-- Methods access data through `self.loaded_data`
-- Store results in `self.reference_collections` dict
-- Return reference_collections to CorpusLoader
-
-### 3. Create CorpusCollectionValidator.py
-**Purpose**: Extract validation methods
-
-**Methods to Move** (lines 1615-1798):
-- `validate_collections()` (1617-1643)
-- `_validate_verbnet_collection()` (1645-1682)
-- `_validate_framenet_collection()` (1684-1716)
-- `_validate_propbank_collection()` (1718-1751)
-- `validate_cross_references()` (1753-1773)
-- `_validate_vn_pb_mappings()` (1775-1798)
-
-**Required Changes**:
-- Create class with `__init__` that accepts loaded_data and logger
-- Methods validate data from `self.loaded_data`
-- Return validation results to CorpusLoader
-
-### 4. Create CorpusCollectionAnalyzer.py
-**Purpose**: Extract statistics and metadata methods
-
-**Methods to Move** (lines 1800-1863):
-- `get_collection_statistics()` (1802-1849)
-- `get_build_metadata()` (1851-1863)
-
-**Required Changes**:
-- Create class with `__init__` that accepts loaded_data, load_status, build_metadata, reference_collections, corpus_paths
-- Methods analyze data and return statistics
-- Return analysis results to CorpusLoader
-
-### 5. Update CorpusLoader.py
-**Purpose**: Main orchestrator that uses helper classes
-
-**Retained Methods**:
-- `__init__()` (30-64) - Initialize and create helper class instances
-- `_detect_corpus_paths()` (66-86)
-- `get_corpus_paths()` (88-95)
-- `load_all_corpora()` (97-139) - Modified to use parser
-- `load_corpus()` (141-185) - Modified to delegate to parser
-
-**New Structure**:
+#### 1.3 Import Stability Tests
 ```python
-class CorpusLoader:
-    def __init__(self, corpora_path: str = 'corpora/'):
-        # ... existing initialization ...
-        
-        # Initialize helper classes
-        self.parser = CorpusParser(self.corpus_paths, self.logger)
-        self.builder = None  # Initialized after data is loaded
-        self.validator = None  # Initialized after data is loaded
-        self.analyzer = None  # Initialized after data is loaded
-    
-    def load_corpus(self, corpus_name: str):
-        # Route to parser methods
-        if corpus_name == 'verbnet':
-            data = self.parser.parse_verbnet_files()
-        # ... etc for each corpus type
-        
-        self.loaded_data[corpus_name] = data
-        # Initialize helpers if not done
-        self._init_helpers()
-        return data
-    
-    def _init_helpers(self):
-        if not self.builder:
-            self.builder = CorpusCollectionBuilder(self.loaded_data, self.logger)
-        if not self.validator:
-            self.validator = CorpusCollectionValidator(self.loaded_data, self.logger)
-        if not self.analyzer:
-            self.analyzer = CorpusCollectionAnalyzer(
-                self.loaded_data, self.load_status, 
-                self.build_metadata, self.reference_collections,
-                self.corpus_paths
-            )
-    
-    def build_reference_collections(self):
-        if not self.builder:
-            self._init_helpers()
-        results = self.builder.build_reference_collections()
-        self.reference_collections = self.builder.reference_collections
-        return results
-    
-    def validate_collections(self):
-        if not self.validator:
-            self._init_helpers()
-        return self.validator.validate_collections()
-    
-    def get_collection_statistics(self):
-        if not self.analyzer:
-            self._init_helpers()
-        return self.analyzer.get_collection_statistics()
+def test_import_stability():
+    """Ensure all expected imports work."""
+    from src.uvi.parsers.verbnet_parser import VerbNetParser
+    from src.uvi.parsers.framenet_parser import FrameNetParser
+    # etc. - Add for all expected imports
 ```
 
-## Implementation Steps
+### Phase 2: Implementation Triage (High Priority)
 
-1. **Create CorpusParser.py**
-   - Copy all parsing methods (lines 187-1452)
-   - Add class definition with `__init__(corpus_paths, logger)`
-   - Update method signatures to use self references
-   - Remove these methods from CorpusLoader.py
+#### 2.1 Placeholder Test Categorization  
+- **Audit each placeholder**: Mark as "implement", "defer", or "remove"
+- **Focus scope**: Core UVI functionality only
+- **Remove tests** for features not in MVP scope
+- **Prioritize by**: User impact and implementation complexity
 
-2. **Create CorpusCollectionBuilder.py**
-   - Copy all building methods (lines 1454-1613)
-   - Add class definition with `__init__(loaded_data, logger)`
-   - Update to store results in `self.reference_collections`
-   - Remove these methods from CorpusLoader.py
+#### 2.2 XML Namespace Handling Strategy
+- Create base parser class with namespace-aware XML parsing
+- Update all XML parsers (FrameNet, PropBank, VerbNet) to handle namespaced elements
+- Use namespace mapping dictionaries in parsers
+- Test with real corpus XML files to validate
 
-3. **Create CorpusCollectionValidator.py**
-   - Copy all validation methods (lines 1615-1798)
-   - Add class definition with `__init__(loaded_data, logger)`
-   - Keep method signatures the same
-   - Remove these methods from CorpusLoader.py
+#### 2.3 Missing Functionality Implementation
+- Implement only categorized "implement" features from placeholder audit
+- Focus on core UVI operations: loading, parsing, cross-referencing
+- Defer advanced features to future releases
 
-4. **Create CorpusCollectionAnalyzer.py**
-   - Copy statistics methods (lines 1800-1863)
-   - Add class definition with required parameters
-   - Keep method signatures the same
-   - Remove these methods from CorpusLoader.py
+### Phase 3: Testing Infrastructure Hardening (Medium Priority)
 
-5. **Update CorpusLoader.py**
-   - Add imports for new classes
-   - Initialize helper classes in `__init__()`
-   - Update `load_corpus()` to delegate to parser
-   - Add proxy methods that delegate to helper classes
-   - Ensure backward compatibility
+#### 3.1 Mock/Patch Systematic Fix
+- Update all mock/patch references to correct module paths
+- Use actual module structure in test mocking
+- Implement consistent mocking patterns across test suite
 
-## Testing Requirements
+#### 3.2 Test Data Management
+- Use pytest fixtures for consistent test data setup
+- Create minimal test corpora for faster iteration  
+- Separate test data creation from test logic
+- Verify test data files match expected corpus structures
 
-After refactoring:
-1. All existing functionality must work exactly as before
-2. The public API of CorpusLoader must remain unchanged
-3. All tests should pass without modification
-4. Performance should not degrade
+#### 3.3 Test Isolation and Cleanup
+- Ensure proper test isolation (no shared state)
+- Implement proper cleanup in tearDown methods
+- Add test data factories for edge cases
 
-## Benefits of Refactoring
+### Phase 4: Validation and Regression Prevention (Ongoing)
 
-1. **Separation of Concerns**: Each class has a single responsibility
-2. **Maintainability**: Easier to find and modify specific functionality
-3. **Testability**: Each component can be tested independently
-4. **Reusability**: Helper classes can be used independently if needed
-5. **Readability**: Smaller files are easier to understand
-6. **Extensibility**: Easier to add new corpus types or validation rules
+#### 4.1 Incremental Testing Approach
+- **Test order**: parsers � utils � UVI � integration
+- **Failure isolation**: Run tests in smaller subsets to prevent cascade failures
+- **Progress tracking**: Monitor passing test count after each fix session
+- **Target**: Fix 10 failures per day with no regressions
 
-## Notes
+#### 4.2 Hybrid Test Strategy
+- **Unit tests**: Fix in isolation first
+- **Integration tests**: Run after all unit tests pass
+- **End-to-end tests**: Final validation with real corpus data
 
-- The BSO mapping methods (`load_bso_mappings`, `apply_bso_mappings`) logically belong with parsing
-- The `_detect_corpus_paths` and `get_corpus_paths` methods stay in CorpusLoader as they're core functionality
-- All private methods (starting with `_`) move with their corresponding public methods
-- The logger should be shared across all classes for consistent logging
-- Consider making helper classes inherit from a common base class in future iterations
+#### 4.3 Performance and Integration Testing
+- Test cross-module dependencies after individual fixes
+- Validate end-to-end UVI functionality with real corpus data
+- Performance testing for large corpus loads
+- Memory usage monitoring during test runs
+
+## Implementation Guidelines
+
+### Test Execution Strategy
+```bash
+# Diagnostic runs
+pytest --tb=no --no-header -v | grep FAILED > failure_analysis.txt
+
+# Development iteration
+pytest -k "parser" -x  # Stop on first failure
+pytest -k "not placeholder" # Skip placeholder tests during development
+
+# Progress tracking
+pytest --tb=line | tee test_results_$(date +%Y%m%d).txt
+```
+
+### Success Metrics
+- **Short term**: Reduce failures from 47 to <20 within 1 week
+- **Medium term**: Reduce failures to <10 within 2 weeks  
+- **Long term**: Achieve >95% test pass rate (d15 failures)
+- **Quality gate**: No regressions in previously passing tests
+
+### Risk Mitigation
+- **Daily regression testing**: Run full test suite before committing changes
+- **Backup strategy**: Keep git branches for each major fix phase
+- **Documentation updates**: Update docstrings and examples as API changes
+- **Feature scope control**: Don't implement new features during bug fixing phase
+
+## Technical Debt Considerations
+
+### Documentation Debt
+- Update docstrings to match actual implementation
+- Create working usage examples with current code structure
+- Document actual vs intended API differences
+
+### Architecture Decisions  
+- **Import structure**: Decide on final module exposure pattern
+- **API consistency**: Ensure consistent constructor patterns across classes
+- **XML parsing strategy**: Standardize namespace handling approach
+- **Test architecture**: Establish testing patterns for future development
+
+## Next Steps Priority Order
+
+1. **Start with Phase 0**: Complete diagnostic deep dive before any fixes
+2. **Fix imports systematically**: Update all `__init__.py` files before touching individual tests
+3. **Implement XML namespace handling**: Create base parser with namespace-aware parsing
+4. **Triage placeholder tests ruthlessly**: Remove tests for unplanned features
+5. **Add regression prevention measures**: Import stability tests and daily test runs
+
+---
+
+*This strategy was developed through comprehensive test analysis, codebase review, and expert feedback. Focus on systematic progression through phases rather than random bug fixes.*

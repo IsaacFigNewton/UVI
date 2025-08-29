@@ -19,11 +19,12 @@ from typing import Dict, List, Any
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+# Add src directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from src.uvi.utils.validation import SchemaValidator, validate_xml_against_dtd, validate_xml_against_xsd
-from src.uvi.utils.cross_refs import CrossReferenceManager, build_cross_reference_index, validate_cross_references
-from src.uvi.utils.file_utils import CorpusFileManager, detect_corpus_structure, safe_file_read
+from uvi.utils.validation import SchemaValidator, validate_xml_against_dtd, validate_xml_against_xsd
+from uvi.utils.cross_refs import CrossReferenceManager, build_cross_reference_index, validate_cross_references
+from uvi.utils.file_utils import CorpusFileManager, detect_corpus_structure, safe_file_read
 
 
 class TestSchemaValidator(unittest.TestCase):
@@ -88,7 +89,7 @@ class TestSchemaValidator(unittest.TestCase):
         
         # Mock the schema finding and validation
         with patch.object(validator, '_find_verbnet_schema', return_value=self.dtd_file_path):
-            with patch('src.uvi.utils.validation.validate_xml_against_dtd') as mock_validate:
+            with patch('uvi.utils.validation.validate_xml_against_dtd') as mock_validate:
                 mock_validate.return_value = {'valid': True, 'errors': []}
                 
                 result = validator.validate_verbnet_xml(self.xml_file_path)
@@ -154,7 +155,7 @@ class TestValidationFunctions(unittest.TestCase):
     def test_validate_xml_against_dtd_mock(self):
         """Test XML validation against DTD (mocked)."""
         # Mock lxml since it might not be available
-        with patch('src.uvi.utils.validation.etree') as mock_etree:
+        with patch('uvi.utils.validation.etree') as mock_etree:
             mock_etree.parse.return_value = Mock()
             mock_etree.DTD.return_value.validate.return_value = True
             mock_etree.DTD.return_value.error_log.last_error = None
@@ -166,7 +167,7 @@ class TestValidationFunctions(unittest.TestCase):
     
     def test_validate_xml_against_dtd_no_lxml(self):
         """Test XML validation when lxml is not available."""
-        with patch('src.uvi.utils.validation.etree', None):
+        with patch('uvi.utils.validation.etree', None):
             result = validate_xml_against_dtd(self.xml_file, Path('dummy.dtd'))
             
             self.assertIsInstance(result, dict)
@@ -175,7 +176,7 @@ class TestValidationFunctions(unittest.TestCase):
     
     def test_validate_xml_against_xsd_mock(self):
         """Test XML validation against XSD (mocked)."""
-        with patch('src.uvi.utils.validation.etree') as mock_etree:
+        with patch('uvi.utils.validation.etree') as mock_etree:
             mock_schema = Mock()
             mock_schema.validate.return_value = True
             mock_schema.error_log.last_error = None

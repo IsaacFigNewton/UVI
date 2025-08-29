@@ -40,7 +40,7 @@ class OntoNotesParser:
             dict: Complete OntoNotes sense data
         """
         ontonotes_data = {
-            'senses': {},
+            'sense_inventories': {},
             'mappings': {
                 'wordnet': {},
                 'verbnet': {},
@@ -60,7 +60,7 @@ class OntoNotesParser:
             try:
                 sense_data = self.parse_sense_file_xml(xml_file)
                 if sense_data and 'lemma' in sense_data:
-                    ontonotes_data['senses'][sense_data['lemma']] = sense_data
+                    ontonotes_data['sense_inventories'][sense_data['lemma']] = sense_data
                     self._extract_mappings(sense_data, ontonotes_data['mappings'])
             except Exception as e:
                 print(f"Error parsing OntoNotes XML file {xml_file}: {e}")
@@ -69,7 +69,7 @@ class OntoNotesParser:
             try:
                 sense_data = self.parse_sense_file_html(html_file)
                 if sense_data and 'lemma' in sense_data:
-                    ontonotes_data['senses'][sense_data['lemma']] = sense_data
+                    ontonotes_data['sense_inventories'][sense_data['lemma']] = sense_data
                     self._extract_mappings(sense_data, ontonotes_data['mappings'])
             except Exception as e:
                 print(f"Error parsing OntoNotes HTML file {html_file}: {e}")

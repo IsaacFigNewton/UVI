@@ -50,7 +50,18 @@ class PropBankParser:
             try:
                 predicate_data = self.parse_predicate_file(xml_file)
                 if predicate_data and 'lemma' in predicate_data:
-                    propbank_data['predicates'][predicate_data['lemma']] = predicate_data
+                    # Flatten structure: extract rolesets from nested predicates
+                    flattened_data = {
+                        'lemma': predicate_data['lemma'],
+                        'attributes': predicate_data['attributes'],
+                        'note': predicate_data['note'],
+                        'rolesets': []
+                    }
+                    # Collect rolesets from all nested predicates
+                    for pred in predicate_data.get('predicates', []):
+                        flattened_data['rolesets'].extend(pred.get('rolesets', []))
+                    
+                    propbank_data['predicates'][predicate_data['lemma']] = flattened_data
             except Exception as e:
                 print(f"Error parsing PropBank file {xml_file}: {e}")
         
@@ -90,7 +101,7 @@ class PropBankParser:
             dict: Parsed frameset data
         """
         frameset_data = {
-            'lemma': frameset_element.get('id', ''),
+            'lemma': frameset_element.get('lemma', ''),
             'attributes': dict(frameset_element.attrib),
             'note': self._extract_text_content(frameset_element.find('.//note')),
             'predicates': self._parse_predicates(frameset_element)

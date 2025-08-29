@@ -99,25 +99,13 @@ class BSOParser:
             for row in reader:
                 # Expected columns: BSO_Category, VerbNet_Class, Members, etc.
                 bso_category = row.get('BSO_Category', '').strip()
-                vn_class = row.get('VerbNet_Class', '').strip()
+                vn_class = (row.get('VerbNet_Class', '') or row.get('VN_Class', '')).strip()
                 members = row.get('Members', '').strip()
                 
                 if bso_category and vn_class:
                     if bso_category not in bso_to_vn:
-                        bso_to_vn[bso_category] = {
-                            'verbnet_classes': [],
-                            'total_members': 0,
-                            'member_details': {}
-                        }
-                    
-                    class_info = {
-                        'class_id': vn_class,
-                        'members': self._parse_members_string(members)
-                    }
-                    
-                    bso_to_vn[bso_category]['verbnet_classes'].append(class_info)
-                    bso_to_vn[bso_category]['total_members'] += len(class_info['members'])
-                    bso_to_vn[bso_category]['member_details'][vn_class] = class_info['members']
+                        bso_to_vn[bso_category] = []
+                    bso_to_vn[bso_category].append(vn_class)
         
         return bso_to_vn
     
@@ -145,25 +133,14 @@ class BSOParser:
             reader = csv.DictReader(csvfile, delimiter=delimiter)
             
             for row in reader:
-                # Expected columns: VerbNet_Class, BSO_Category, Members, etc.
-                vn_class = row.get('VerbNet_Class', '').strip()
+                # Expected columns: VerbNet_Class/VN_Class, BSO_Category, Members, etc.
+                vn_class = (row.get('VerbNet_Class', '') or row.get('VN_Class', '')).strip()
                 bso_category = row.get('BSO_Category', '').strip()
                 members = row.get('Members', '').strip()
                 
                 if vn_class and bso_category:
-                    if vn_class not in vn_to_bso:
-                        vn_to_bso[vn_class] = {
-                            'bso_categories': [],
-                            'members': []
-                        }
-                    
-                    category_info = {
-                        'category': bso_category,
-                        'confidence': 1.0  # Default confidence, could be extracted from data
-                    }
-                    
-                    vn_to_bso[vn_class]['bso_categories'].append(category_info)
-                    vn_to_bso[vn_class]['members'] = self._parse_members_string(members)
+                    # For simplicity, just store the BSO category string
+                    vn_to_bso[vn_class] = bso_category
         
         return vn_to_bso
     

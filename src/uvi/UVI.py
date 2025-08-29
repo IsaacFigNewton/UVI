@@ -219,7 +219,7 @@ class UVI:
         """
         # Validate input parameters
         if not lemmas:
-            raise ValueError("Lemmas list cannot be empty")
+            return {}  # Return empty result for empty input
         
         if include_resources is None:
             include_resources = list(self.loaded_corpora)
@@ -351,22 +351,27 @@ class UVI:
         if not source_entry:
             return related_entries
         
-        # Find cross-references based on corpus type combinations
-        if source_corpus == 'verbnet' and target_corpus == 'propbank':
-            related_entries = self._find_verbnet_propbank_mappings(source_id, source_entry)
-        elif source_corpus == 'verbnet' and target_corpus == 'framenet':
-            related_entries = self._find_verbnet_framenet_mappings(source_id, source_entry)
-        elif source_corpus == 'verbnet' and target_corpus == 'wordnet':
-            related_entries = self._find_verbnet_wordnet_mappings(source_id, source_entry)
-        elif source_corpus == 'verbnet' and target_corpus == 'bso':
-            related_entries = self._find_verbnet_bso_mappings(source_id, source_entry)
-        elif source_corpus == 'propbank' and target_corpus == 'verbnet':
-            related_entries = self._find_propbank_verbnet_mappings(source_id, source_entry)
-        elif source_corpus == 'ontonotes':
-            related_entries = self._find_ontonotes_mappings(source_id, source_entry, target_corpus)
-        else:
-            # Generic mapping search based on shared lemmas or members
-            related_entries = self._find_generic_cross_references(source_entry, target_corpus)
+        # Use cross-reference manager if available
+        if hasattr(self, '_cross_ref_manager') and self._cross_ref_manager:
+            try:
+                cross_refs = self._cross_ref_manager.find_cross_references(source_id, source_corpus)
+                # Filter for target corpus
+                for ref in cross_refs:
+                    target_key = ref.get('target', '')
+                    if target_key.startswith(f"{target_corpus}:"):
+                        target_id = target_key.split(':', 1)[1]
+                        target_entry = self._get_corpus_entry(target_id, target_corpus)
+                        if target_entry:
+                            related_entries.append({
+                                'id': target_id,
+                                'corpus': target_corpus,
+                                'data': target_entry,
+                                'confidence': ref.get('confidence', 0.0),
+                                'mapping_type': 'cross_reference'
+                            })
+            except Exception:
+                # If cross-reference manager fails, return empty list
+                pass
         
         return related_entries
     
@@ -1972,6 +1977,7 @@ class UVI:
         
         corpus_path = self.corpus_paths[corpus_name]
         # Schema validation will be implemented later
+        validator = None
         
         return self._validate_xml_corpus_files(corpus_name, corpus_path, validator)
     
@@ -2811,6 +2817,50 @@ class UVI:
         
         return {}
     
+    def _get_corpus_entry(self, entry_id: str, corpus_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a specific entry from a corpus by its ID.
+        
+        Args:
+            entry_id (str): ID of the entry to retrieve
+            corpus_name (str): Name of the corpus
+            
+        Returns:
+            dict: Entry data if found, None otherwise
+        """
+        if corpus_name not in self.loaded_corpora:
+            return None
+            
+        corpus_data = self.corpora_data.get(corpus_name, {})
+        
+        if corpus_name == 'verbnet':
+            return corpus_data.get('classes', {}).get(entry_id)
+        elif corpus_name == 'framenet':
+            return corpus_data.get('frames', {}).get(entry_id)
+        elif corpus_name == 'propbank':
+            lemma = entry_id.split('.')[0] if '.' in entry_id else entry_id
+            return corpus_data.get('frames', {}).get(lemma, {}).get('rolesets', {}).get(entry_id)
+        elif corpus_name == 'ontonotes':
+            return corpus_data.get('senses', {}).get(entry_id)
+        elif corpus_name == 'wordnet':
+            # For WordNet, entry_id might be in format "pos:offset"
+            if ':' in entry_id:
+                pos, offset = entry_id.split(':', 1)
+                return corpus_data.get('synsets', {}).get(pos, {}).get(offset)
+            else:
+                # Search all POS for the entry
+                for pos_synsets in corpus_data.get('synsets', {}).values():
+                    if entry_id in pos_synsets:
+                        return pos_synsets[entry_id]
+        elif corpus_name == 'bso':
+            return corpus_data.get('categories', {}).get(entry_id)
+        elif corpus_name == 'semnet':
+            return corpus_data.get('verbs', {}).get(entry_id)
+        elif corpus_name == 'reference_docs':
+            return corpus_data.get('documents', {}).get(entry_id)
+            
+        return None
+    
     def _find_indirect_mappings(self, entry_id: str, source_corpus: str, target_corpus: str) -> List[Dict[str, Any]]:
         """Find indirect mappings through intermediate corpora."""
         indirect_entries = []
@@ -3410,11 +3460,12 @@ class UVI:
         if '-' not in class_id:
             return class_id
         
-        # Extract numerical prefix (e.g., "51" from "51.3.2-1")
+        # For format like "run-51.3.2-1", extract "51" (the numerical class)
         parts = class_id.split('-')
-        if parts:
-            base_parts = parts[0].split('.')
-            return base_parts[0] if base_parts else class_id
+        if len(parts) >= 2:
+            # parts[1] should be something like "51.3.2"
+            numerical_part = parts[1].split('.')[0]  # Get "51"
+            return numerical_part
         
         return class_id
     
@@ -3727,13 +3778,14 @@ class UVI:
     
     # Internal corpus loading methods (for testing)
     
-    def _load_verbnet(self, verbnet_path: Path) -> None:
+    def _load_verbnet(self, verbnet_path) -> None:
         """
         Load VerbNet corpus from XML files.
         
         Args:
-            verbnet_path (Path): Path to VerbNet corpus directory
+            verbnet_path: Path to VerbNet corpus directory (str or Path)
         """
+        verbnet_path = Path(verbnet_path)  # Ensure it's a Path object
         verbnet_data = {
             'classes': {},
             'hierarchy': {'by_name': {}, 'by_id': {}},

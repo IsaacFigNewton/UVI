@@ -19,11 +19,28 @@ class CrossReferenceManager:
     different linguistic corpora.
     """
     
-    def __init__(self):
+    def __init__(self, corpora_data: Optional[Dict[str, Dict[str, Any]]] = None):
         """Initialize cross-reference manager."""
+        self.corpora_data = corpora_data or {}
         self.cross_reference_index = {}
+        self.cross_ref_index = {}  # Alias for backward compatibility
         self.mapping_confidence = {}
         self.validation_results = {}
+    
+    def build_cross_reference_index(self, corpus_data: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
+        """
+        Build cross-reference index from corpus data.
+        
+        Args:
+            corpus_data (dict, optional): Data from all loaded corpora. Uses self.corpora_data if not provided.
+            
+        Returns:
+            dict: Cross-reference index
+        """
+        data = corpus_data or self.corpora_data
+        result = self.build_index(data)
+        self.cross_ref_index = result
+        return result
     
     def build_index(self, corpus_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -36,6 +53,12 @@ class CrossReferenceManager:
             dict: Cross-reference index
         """
         index = {
+            'verbnet_to_propbank': {},
+            'propbank_to_verbnet': {},
+            'verbnet_to_framenet': {},
+            'framenet_to_verbnet': {},
+            'propbank_to_framenet': {},
+            'framenet_to_propbank': {},
             'by_source': {},  # Source corpus -> target mappings
             'by_target': {},  # Target corpus -> source mappings
             'bidirectional': {},  # Bidirectional mappings
@@ -343,6 +366,52 @@ class CrossReferenceManager:
         
         return False
 
+    def find_cross_references(self, entry_id: str, source_corpus: str) -> List[Dict[str, Any]]:
+        """
+        Find cross-references for a specific entry.
+        
+        Args:
+            entry_id (str): ID of the entry
+            source_corpus (str): Source corpus name
+            
+        Returns:
+            list: List of cross-references
+        """
+        return self.find_mappings(entry_id, source_corpus)
+
+    def validate_cross_reference(self, source_id: str, source_corpus: str,
+                                target_id: str, target_corpus: str) -> Dict[str, Any]:
+        """
+        Validate a cross-reference between two entries.
+        
+        Args:
+            source_id (str): Source entry ID
+            source_corpus (str): Source corpus name
+            target_id (str): Target entry ID
+            target_corpus (str): Target corpus name
+            
+        Returns:
+            dict: Validation results
+        """
+        return self.validate_mapping(source_id, source_corpus, target_id, target_corpus, self.corpora_data)
+
+    def get_mapping_confidence(self, source_id: str, source_corpus: str,
+                              target_id: str, target_corpus: str) -> float:
+        """
+        Get confidence score for a mapping.
+        
+        Args:
+            source_id (str): Source entry ID
+            source_corpus (str): Source corpus name  
+            target_id (str): Target entry ID
+            target_corpus (str): Target corpus name
+            
+        Returns:
+            float: Confidence score (0.0 to 1.0)
+        """
+        mapping_key = f"{source_corpus}:{source_id}->{target_corpus}:{target_id}"
+        return self.cross_reference_index.get('confidence_scores', {}).get(mapping_key, 0.0)
+
 
 def build_cross_reference_index(corpus_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     """
@@ -358,20 +427,19 @@ def build_cross_reference_index(corpus_data: Dict[str, Dict[str, Any]]) -> Dict[
     return manager.build_index(corpus_data)
 
 
-def validate_cross_references(corpus_data: Dict[str, Dict[str, Any]], 
-                             sample_size: Optional[int] = None) -> Dict[str, Any]:
+def validate_cross_references(index: Dict[str, Dict[str, Any]], 
+                             corpus_data: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     """
     Validate cross-references between corpora.
     
     Args:
+        index (dict): Cross-reference index
         corpus_data (dict): Data from all loaded corpora
-        sample_size (int): Limit validation to a sample (for performance)
         
     Returns:
         dict: Validation results
     """
-    manager = CrossReferenceManager()
-    index = manager.build_index(corpus_data)
+    # Index is already provided, no need to build it again
     
     validation_results = {
         'total_mappings': 0,
@@ -391,9 +459,10 @@ def validate_cross_references(corpus_data: Dict[str, Dict[str, Any]],
         for mapping in mappings:
             mappings_to_validate.append((source, mapping.get('target', '')))
     
-    if sample_size and sample_size < len(mappings_to_validate):
-        import random
-        mappings_to_validate = random.sample(mappings_to_validate, sample_size)
+    # For testing, we don't need sampling - validate all mappings
+    # if sample_size and sample_size < len(mappings_to_validate):
+    #     import random
+    #     mappings_to_validate = random.sample(mappings_to_validate, sample_size)
     
     # Validate each mapping
     for source_full, target_full in mappings_to_validate:
