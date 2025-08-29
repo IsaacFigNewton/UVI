@@ -139,9 +139,22 @@ class InteractiveFrameNetGraph(FrameNetVisualizer):
         """Draw the graph with current state."""
         self.ax.clear()
         
-        # Color nodes based on depth and selection
+        # Color and size nodes based on type and selection
         node_colors = [self.get_node_color(node) for node in self.G.nodes()]
-        node_sizes = [3000 if node == self.selected_node else 2000 for node in self.G.nodes()]
+        node_sizes = []
+        
+        for node in self.G.nodes():
+            node_data = self.G.nodes.get(node, {})
+            node_type = node_data.get('node_type', 'frame')
+            
+            if node == self.selected_node:
+                size = 3000  # Selected nodes are largest
+            elif node_type == 'lexical_unit':
+                size = 1000  # Lexical units are smaller
+            else:
+                size = 2000  # Frames are medium size
+            
+            node_sizes.append(size)
         
         # Draw nodes
         nx.draw_networkx_nodes(

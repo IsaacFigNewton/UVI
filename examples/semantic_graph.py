@@ -41,30 +41,54 @@ except ImportError as e:
     sys.exit(1)
 
 
-def create_demo_graph(framenet_data, num_frames=10):
-    """Create a demo graph using actual FrameNet frames."""
-    print(f"Creating demo graph with {num_frames} FrameNet frames...")
+def create_demo_graph(framenet_data, num_frames=6, max_lus_per_frame=3):
+    """Create a demo graph using actual FrameNet frames and their lexical units."""
+    print(f"Creating demo graph with {num_frames} FrameNet frames and their lexical units...")
     
     frames_data = framenet_data.get('frames', {})
     if not frames_data:
         print("No frames data available")
         return None, {}
     
-    # Select a diverse set of frames for demonstration
-    frame_names = list(frames_data.keys())[:num_frames]
-    print(f"Selected frames: {frame_names}")
+    # Select frames that have lexical units for a more interesting demo
+    frames_with_lus = []
+    checked_frames = 0
+    
+    for frame_name, frame_data in frames_data.items():
+        checked_frames += 1
+        lexical_units = frame_data.get('lexical_units', {})
+        if isinstance(lexical_units, dict) and len(lexical_units) > 0:
+            frames_with_lus.append((frame_name, len(lexical_units)))
+        if len(frames_with_lus) >= num_frames * 2:  # Get more options to choose from
+            break
+        if checked_frames >= 100:  # Limit search to avoid long delays
+            break
+    
+    print(f"Checked {checked_frames} frames, found {len(frames_with_lus)} frames with lexical units")
+    
+    # Sort by number of lexical units and take diverse set
+    frames_with_lus.sort(key=lambda x: x[1], reverse=True)
+    selected_frames = [name for name, _ in frames_with_lus[:num_frames]]
+    
+    # Fallback: if no frames with LUs found, use any frames
+    if not selected_frames:
+        print("No frames with lexical units found, using any available frames")
+        selected_frames = list(frames_data.keys())[:num_frames]
+    
+    print(f"Selected frames: {selected_frames}")
     
     # Create graph and hierarchy for visualization
     G = nx.DiGraph()  # Use directed graph as expected by visualization classes
     hierarchy = {}
     
-    for i, frame_name in enumerate(frame_names):
+    for i, frame_name in enumerate(selected_frames):
         frame_data = frames_data[frame_name]
+        lexical_units = frame_data.get('lexical_units', {})
         
-        # Add node to graph first
-        G.add_node(frame_name)
+        # Add frame node to graph
+        G.add_node(frame_name, node_type='frame')
         
-        # Create hierarchy entry with actual frame information
+        # Create hierarchy entry for frame
         hierarchy[frame_name] = {
             'parents': [],
             'children': [],
@@ -72,16 +96,45 @@ def create_demo_graph(framenet_data, num_frames=10):
                 'name': frame_data.get('name', frame_name),
                 'definition': frame_data.get('definition', 'No definition available'),
                 'id': frame_data.get('ID', 'Unknown'),
-                'elements': len(frame_data.get('frame_elements', [])),
-                'lexical_units': len(frame_data.get('lexical_units', []))
+                'elements': len(frame_data.get('frame_elements', {})),
+                'lexical_units': len(lexical_units),
+                'node_type': 'frame'
             }
         }
         
-        # Add some demo connections for visualization (just for layout purposes)
-        if i > 0:
-            prev_frame = frame_names[i-1]
+        # Add lexical units as child nodes (if any exist)
+        if lexical_units and isinstance(lexical_units, dict):
+            lu_items = list(lexical_units.items())[:max_lus_per_frame]
+            for j, (lu_name, lu_data) in enumerate(lu_items):
+                lu_full_name = f"{lu_name}.{frame_name}"  # Make LU names unique
+                
+                # Add LU node to graph
+                G.add_node(lu_full_name, node_type='lexical_unit')
+                G.add_edge(frame_name, lu_full_name)
+                
+                # Create hierarchy entry for lexical unit
+                hierarchy[lu_full_name] = {
+                    'parents': [frame_name],
+                    'children': [],
+                    'frame_info': {
+                        'name': lu_data.get('name', lu_name),
+                        'definition': lu_data.get('definition', 'No definition available'),
+                        'pos': lu_data.get('POS', 'Unknown'),
+                        'frame': frame_name,
+                        'node_type': 'lexical_unit'
+                    }
+                }
+                
+                # Update frame's children list
+                hierarchy[frame_name]['children'].append(lu_full_name)
+        # If no lexical units exist, just leave the frame without children
+        # Only use actual FrameNet data
+        
+        # Add some demo frame-to-frame connections for layout
+        if i > 0 and i < len(selected_frames) - 1:
+            prev_frame = selected_frames[i-1]
             G.add_edge(prev_frame, frame_name)
-            # Update hierarchy to reflect parent-child relationships
+            # Update hierarchy to reflect frame relationships
             hierarchy[prev_frame]['children'].append(frame_name)
             hierarchy[frame_name]['parents'].append(prev_frame)
     
@@ -91,7 +144,7 @@ def create_demo_graph(framenet_data, num_frames=10):
     
     # If no clear roots, use the first node as root
     if not roots:
-        roots = [frame_names[0]]
+        roots = [selected_frames[0]]
     
     # BFS to calculate depths
     from collections import deque
@@ -150,18 +203,24 @@ def main():
         total_frames = len(framenet_data.get('frames', {}))
         print(f"Found {total_frames} frames in FrameNet")
         
-        # Create demo graph with actual FrameNet frames
-        G, hierarchy = create_demo_graph(framenet_data, num_frames=8)
+        # Create demo graph with actual FrameNet frames and lexical units
+        G, hierarchy = create_demo_graph(framenet_data, num_frames=5, max_lus_per_frame=2)
         
         if G is None or G.number_of_nodes() == 0:
             print("Could not create visualization graph")
             return
         
-        # Show sample frame information
-        print(f"\\nSample frame information:")
+        # Show sample node information
+        print(f"\\nSample node information:")
         for node in list(G.nodes())[:3]:
             frame_info = hierarchy[node]['frame_info']
-            print(f"  {node}: {frame_info['elements']} elements, {frame_info['lexical_units']} lexical units")
+            node_type = frame_info.get('node_type', 'frame')
+            if node_type == 'frame':
+                elements = frame_info.get('elements', 0)
+                lexical_units = frame_info.get('lexical_units', 0)
+                print(f"  {node} (Frame): {elements} elements, {lexical_units} lexical units")
+            else:
+                print(f"  {node} (Lexical Unit): {frame_info.get('pos', 'Unknown')} from {frame_info.get('frame', 'Unknown')}")
         
         print(f"\\nCreating interactive visualization...")
         print("Instructions:")

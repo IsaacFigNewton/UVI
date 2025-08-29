@@ -114,7 +114,16 @@ class FrameNetVisualizer:
                     pos[node2] = (x2 + dx * adjustment, y2 + dy * adjustment)
     
     def get_dag_node_color(self, node):
-        """Get color for a node based on DAG properties."""
+        """Get color for a node based on DAG properties and node type."""
+        # Check if node has type information
+        node_data = self.G.nodes.get(node, {})
+        node_type = node_data.get('node_type', 'frame')
+        
+        # Different colors for different node types
+        if node_type == 'lexical_unit':
+            return 'lightyellow'  # Lexical units get yellow color
+        
+        # For frames, use DAG-based coloring
         in_degree = self.G.in_degree(node)
         out_degree = self.G.out_degree(node)
         
@@ -145,40 +154,87 @@ class FrameNetVisualizer:
             return f"Node: {node}\nNo additional information available."
         
         data = self.hierarchy[node]
-        info = [f"Frame: {node}"]
-        info.append(f"Depth: {data.get('depth', 'Unknown')}")
-        
-        parents = data.get('parents', [])
-        if parents:
-            info.append(f"Parents: {', '.join(parents[:3])}")
-            if len(parents) > 3:
-                info.append(f"  ... and {len(parents)-3} more")
-        
-        children = data.get('children', [])
-        if children:
-            info.append(f"Children: {', '.join(children[:5])}")
-            if len(children) > 5:
-                info.append(f"  ... and {len(children)-5} more")
-        
-        # Add frame definition if available
         frame_info = data.get('frame_info', {})
-        definition = frame_info.get('definition', '')
-        if definition and len(definition.strip()) > 0:
-            # Truncate long definitions
-            if len(definition) > 100:
-                definition = definition[:97] + "..."
-            info.append(f"Definition: {definition}")
+        node_type = frame_info.get('node_type', 'frame')
         
-        return '\n'.join(info)
+        # Different display format for different node types
+        if node_type == 'lexical_unit':
+            info = [f"Lexical Unit: {frame_info.get('name', node)}"]
+            info.append(f"Frame: {frame_info.get('frame', 'Unknown')}")
+            info.append(f"Depth: {data.get('depth', 'Unknown')}")
+            info.append(f"POS: {frame_info.get('pos', 'Unknown')}")
+            
+            definition = frame_info.get('definition', '')
+            if definition and len(definition.strip()) > 0:
+                if len(definition) > 100:
+                    definition = definition[:97] + "..."
+                info.append(f"Definition: {definition}")
+        else:
+            # Frame node
+            info = [f"Frame: {node}"]
+            info.append(f"Depth: {data.get('depth', 'Unknown')}")
+            
+            parents = data.get('parents', [])
+            if parents:
+                # Limit parents display to avoid overly long tooltips
+                if len(parents) <= 3:
+                    info.append(f"Parents: {', '.join(parents)}")
+                elif len(parents) <= 6:
+                    info.append(f"Parents: {', '.join(parents[:3])}")
+                    info.append(f"  ... and {len(parents)-3} more")
+                else:
+                    # For nodes with many parents, just show count
+                    info.append(f"Parents: {len(parents)} parent nodes")
+            
+            children = data.get('children', [])
+            if children:
+                # Limit children display to avoid overly long tooltips
+                if len(children) <= 3:
+                    info.append(f"Children: {', '.join(children)}")
+                elif len(children) <= 6:
+                    info.append(f"Children: {', '.join(children[:3])}")
+                    info.append(f"  ... and {len(children)-3} more")
+                else:
+                    # For nodes with many children, just show count
+                    info.append(f"Children: {len(children)} child nodes")
+            
+            # Add frame definition if available
+            definition = frame_info.get('definition', '')
+            if definition and len(definition.strip()) > 0:
+                # Truncate long definitions for tooltip readability
+                if len(definition) > 80:
+                    definition = definition[:77] + "..."
+                info.append(f"Definition: {definition}")
+        
+        # Join and ensure tooltip doesn't become too long overall
+        result = '\n'.join(info)
+        if len(result) > 300:
+            # If tooltip is still too long, truncate and add notice
+            lines = result.split('\n')
+            truncated_lines = []
+            char_count = 0
+            
+            for line in lines:
+                if char_count + len(line) + 1 <= 280:  # Leave room for truncation notice
+                    truncated_lines.append(line)
+                    char_count += len(line) + 1
+                else:
+                    truncated_lines.append("... (tooltip truncated)")
+                    break
+            
+            result = '\n'.join(truncated_lines)
+        
+        return result
     
     def create_dag_legend(self):
         """Create legend elements for DAG visualization."""
         from matplotlib.patches import Patch
         return [
-            Patch(facecolor='lightblue', label='Source Nodes (no parents)'),
-            Patch(facecolor='lightgreen', label='Intermediate Nodes'),
-            Patch(facecolor='lightcoral', label='Sink Nodes (no children)'),
-            Patch(facecolor='lightgray', label='Isolated Nodes')
+            Patch(facecolor='lightblue', label='Source Frames (no parents)'),
+            Patch(facecolor='lightgreen', label='Intermediate Frames'),
+            Patch(facecolor='lightcoral', label='Sink Frames (no children)'),
+            Patch(facecolor='lightgray', label='Isolated Frames'),
+            Patch(facecolor='lightyellow', label='Lexical Units')
         ]
     
     def create_taxonomic_legend(self):

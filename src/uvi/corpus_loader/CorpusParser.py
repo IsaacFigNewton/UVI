@@ -641,9 +641,12 @@ class CorpusParser:
         if root is None:
             return {}
         
+        # Define FrameNet namespace
+        framenet_ns = {'fn': 'http://framenet.icsi.berkeley.edu'}
+        
         frame_data = self._extract_xml_element_data(root, ['name', 'ID'])
         frame_data.update({
-            'definition': self._extract_text_content(root.find('.//definition')),
+            'definition': self._extract_text_content(root.find('.//fn:definition', framenet_ns)),
             'frame_elements': {},
             'lexical_units': {},
             'frame_relations': [],
@@ -651,19 +654,19 @@ class CorpusParser:
         })
         
         # Extract frame elements
-        for fe in root.findall('.//FE'):
+        for fe in root.findall('.//fn:FE', framenet_ns):
             fe_data = self._extract_xml_element_data(fe, ['name', 'ID', 'coreType'])
             fe_name = fe_data.get('name')
             if fe_name:
-                fe_data['definition'] = self._extract_text_content(fe.find('.//definition'))
+                fe_data['definition'] = self._extract_text_content(fe.find('.//fn:definition', framenet_ns))
                 frame_data['frame_elements'][fe_name] = fe_data
         
         # Extract lexical units
-        for lu in root.findall('.//lexUnit'):
+        for lu in root.findall('.//fn:lexUnit', framenet_ns):
             lu_data = self._extract_xml_element_data(lu, ['name', 'ID', 'POS', 'lemmaID'])
             lu_name = lu_data.get('name')
             if lu_name:
-                lu_data['definition'] = self._extract_text_content(lu.find('.//definition'))
+                lu_data['definition'] = self._extract_text_content(lu.find('.//fn:definition', framenet_ns))
                 frame_data['lexical_units'][lu_name] = lu_data
         
         return frame_data

@@ -144,15 +144,16 @@ class TestFrameNetVisualizer(unittest.TestCase):
     def test_create_dag_legend(self):
         """Test DAG legend creation."""
         legend_elements = self.visualizer.create_dag_legend()
-        self.assertEqual(len(legend_elements), 4)
+        self.assertEqual(len(legend_elements), 5)  # Updated to include lexical units
         
         # Check that legend contains expected labels
         labels = [element.get_label() for element in legend_elements]
         expected_labels = [
-            'Source Nodes (no parents)',
-            'Intermediate Nodes', 
-            'Sink Nodes (no children)',
-            'Isolated Nodes'
+            'Source Frames (no parents)',
+            'Intermediate Frames', 
+            'Sink Frames (no children)',
+            'Isolated Frames',
+            'Lexical Units'
         ]
         self.assertEqual(labels, expected_labels)
     
@@ -290,7 +291,8 @@ class TestInteractiveFrameNetGraph(unittest.TestCase):
         
         self.interactive_graph.hide_tooltip()
         
-        mock_annotation.remove.assert_called_once()
+        # Updated to check set_visible instead of remove since the implementation changed
+        mock_annotation.set_visible.assert_called_once_with(False)
         mock_canvas.draw_idle.assert_called_once()
         self.assertIsNone(self.interactive_graph.annotation)
 
