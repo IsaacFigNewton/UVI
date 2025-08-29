@@ -123,26 +123,22 @@ class CorpusLoader:
                     result = self.load_corpus(corpus_name)
                     end_time = datetime.now()
                     
-                    loading_results[corpus_name] = {
-                        'status': 'success',
-                        'load_time': (end_time - start_time).total_seconds(),
-                        'data_keys': list(result.keys()) if isinstance(result, dict) else [],
-                        'timestamp': start_time.isoformat()
-                    }
+                    loading_results[corpus_name] = self._create_loading_result(
+                        'success',
+                        load_time=(end_time - start_time).total_seconds(),
+                        data_keys=list(result.keys()) if isinstance(result, dict) else [],
+                        timestamp=start_time.isoformat()
+                    )
                     self.logger.info(f"Successfully loaded {corpus_name}")
                     
                 except Exception as e:
-                    loading_results[corpus_name] = {
-                        'status': 'error',
-                        'error': str(e),
-                        'timestamp': datetime.now().isoformat()
-                    }
+                    loading_results[corpus_name] = self._create_loading_result(
+                        'error',
+                        error=str(e)
+                    )
                     self.logger.error(f"Failed to load {corpus_name}: {e}")
             else:
-                loading_results[corpus_name] = {
-                    'status': 'not_found',
-                    'timestamp': datetime.now().isoformat()
-                }
+                loading_results[corpus_name] = self._create_loading_result('not_found')
         
         # Build reference collections after loading
         self.build_reference_collections()
@@ -167,68 +163,116 @@ class CorpusLoader:
         # Ensure parser is initialized
         self._init_parser()
         
-        # Route to appropriate parser method
-        if corpus_name == 'verbnet':
-            data = self.parser.parse_verbnet_files()
-        elif corpus_name == 'framenet':
-            data = self.parser.parse_framenet_files()
-        elif corpus_name == 'propbank':
-            data = self.parser.parse_propbank_files()
-        elif corpus_name == 'ontonotes':
-            data = self.parser.parse_ontonotes_files()
-        elif corpus_name == 'wordnet':
-            data = self.parser.parse_wordnet_files()
-        elif corpus_name == 'bso':
-            data = self.parser.parse_bso_mappings()
-        elif corpus_name == 'semnet':
-            data = self.parser.parse_semnet_data()
-        elif corpus_name == 'reference_docs':
-            data = self.parser.parse_reference_docs()
-        elif corpus_name == 'vn_api':
-            data = self.parser.parse_vn_api_files()
-        else:
+        # Parser method dispatch map
+        parser_dispatch = {
+            'verbnet': 'parse_verbnet_files',
+            'framenet': 'parse_framenet_files',
+            'propbank': 'parse_propbank_files',
+            'ontonotes': 'parse_ontonotes_files',
+            'wordnet': 'parse_wordnet_files',
+            'bso': 'parse_bso_mappings',
+            'semnet': 'parse_semnet_data',
+            'reference_docs': 'parse_reference_docs',
+            'vn_api': 'parse_vn_api_files'
+        }
+        
+        if corpus_name not in parser_dispatch:
             raise ValueError(f"Unsupported corpus type: {corpus_name}")
+        
+        # Call the appropriate parser method
+        parser_method = getattr(self.parser, parser_dispatch[corpus_name])
+        data = parser_method()
         
         # Store BSO mappings for later use if this was a BSO parse
         if corpus_name == 'bso':
             self.bso_mappings = data
         
         self.loaded_data[corpus_name] = data
-        self.load_status[corpus_name] = {
-            'loaded': True,
-            'timestamp': datetime.now().isoformat(),
-            'path': str(corpus_path)
-        }
+        self._update_load_status(corpus_name, corpus_path)
         
         return data
     
     # Helper initialization methods
     
+    def _init_component(self, component_name: str, component_class, *args):
+        """
+        Generic initialization method for lazy-loading components.
+        
+        Args:
+            component_name (str): Name of the component attribute
+            component_class: Class to instantiate
+            *args: Arguments to pass to the constructor
+        """
+        if not getattr(self, component_name):
+            setattr(self, component_name, component_class(*args))
+    
     def _init_parser(self):
         """Initialize the CorpusParser if not already initialized."""
-        if not self.parser:
-            self.parser = CorpusParser(self.corpus_paths, self.logger)
+        self._init_component('parser', CorpusParser, self.corpus_paths, self.logger)
     
     def _init_builder(self):
         """Initialize the CorpusCollectionBuilder if not already initialized."""
-        if not self.builder:
-            self.builder = CorpusCollectionBuilder(self.loaded_data, self.logger)
+        self._init_component('builder', CorpusCollectionBuilder, self.loaded_data, self.logger)
     
     def _init_validator(self):
         """Initialize the CorpusCollectionValidator if not already initialized."""
-        if not self.validator:
-            self.validator = CorpusCollectionValidator(self.loaded_data, self.logger)
+        self._init_component('validator', CorpusCollectionValidator, self.loaded_data, self.logger)
     
     def _init_analyzer(self):
         """Initialize the CorpusCollectionAnalyzer if not already initialized."""
-        if not self.analyzer:
-            self.analyzer = CorpusCollectionAnalyzer(
-                self.loaded_data, 
-                self.load_status, 
-                self.build_metadata, 
-                self.reference_collections,
-                self.corpus_paths
-            )
+        self._init_component('analyzer', CorpusCollectionAnalyzer, 
+                           self.loaded_data, self.load_status, self.build_metadata, 
+                           self.reference_collections, self.corpus_paths)
+    
+    # Common operation helper methods
+    
+    def _update_load_status(self, corpus_name: str, corpus_path: Path) -> None:
+        """
+        Update load status for a corpus with timestamp and path information.
+        
+        Args:
+            corpus_name (str): Name of the corpus
+            corpus_path (Path): Path to the corpus
+        """
+        self.load_status[corpus_name] = {
+            'loaded': True,
+            'timestamp': datetime.now().isoformat(),
+            'path': str(corpus_path)
+        }
+    
+    def _create_loading_result(self, status: str, **kwargs) -> Dict[str, Any]:
+        """
+        Create a standardized loading result dictionary.
+        
+        Args:
+            status (str): Status of the loading operation
+            **kwargs: Additional key-value pairs to include
+            
+        Returns:
+            dict: Standardized loading result
+        """
+        result = {
+            'status': status,
+            'timestamp': datetime.now().isoformat()
+        }
+        result.update(kwargs)
+        return result
+    
+    def _build_with_reference_update(self, build_method_name: str) -> bool:
+        """
+        Generic method for building collections and updating references.
+        
+        Args:
+            build_method_name (str): Name of the builder method to call
+            
+        Returns:
+            bool: Success status
+        """
+        self._init_builder()
+        build_method = getattr(self.builder, build_method_name)
+        result = build_method()
+        self.reference_collections = self.builder.reference_collections
+        return result
     
     def build_reference_collections(self) -> Dict[str, bool]:
         """
@@ -249,10 +293,7 @@ class CorpusLoader:
         Returns:
             bool: Success status
         """
-        self._init_builder()
-        result = self.builder.build_predicate_definitions()
-        self.reference_collections = self.builder.reference_collections
-        return result
+        return self._build_with_reference_update('build_predicate_definitions')
     
     def build_themrole_definitions(self) -> bool:
         """
@@ -261,10 +302,7 @@ class CorpusLoader:
         Returns:
             bool: Success status
         """
-        self._init_builder()
-        result = self.builder.build_themrole_definitions()
-        self.reference_collections = self.builder.reference_collections
-        return result
+        return self._build_with_reference_update('build_themrole_definitions')
     
     def build_verb_specific_features(self) -> bool:
         """
@@ -273,10 +311,7 @@ class CorpusLoader:
         Returns:
             bool: Success status
         """
-        self._init_builder()
-        result = self.builder.build_verb_specific_features()
-        self.reference_collections = self.builder.reference_collections
-        return result
+        return self._build_with_reference_update('build_verb_specific_features')
     
     def build_syntactic_restrictions(self) -> bool:
         """
@@ -285,10 +320,7 @@ class CorpusLoader:
         Returns:
             bool: Success status
         """
-        self._init_builder()
-        result = self.builder.build_syntactic_restrictions()
-        self.reference_collections = self.builder.reference_collections
-        return result
+        return self._build_with_reference_update('build_syntactic_restrictions')
     
     def build_selectional_restrictions(self) -> bool:
         """
@@ -297,10 +329,7 @@ class CorpusLoader:
         Returns:
             bool: Success status
         """
-        self._init_builder()
-        result = self.builder.build_selectional_restrictions()
-        self.reference_collections = self.builder.reference_collections
-        return result
+        return self._build_with_reference_update('build_selectional_restrictions')
     
     # Validation methods
     

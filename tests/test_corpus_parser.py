@@ -149,7 +149,7 @@ class TestCorpusParser:
         """Test parse_verbnet_files with missing VerbNet path."""
         parser_no_vn = CorpusParser({}, self.mock_logger)
         
-        with pytest.raises(FileNotFoundError, match="VerbNet corpus path not configured"):
+        with pytest.raises(FileNotFoundError, match="verbnet corpus path not configured"):
             parser_no_vn.parse_verbnet_files()
 
     def test_parse_verbnet_files_no_xml_files(self):
@@ -254,7 +254,7 @@ class TestCorpusParser:
         """Test parse_framenet_files with missing FrameNet path."""
         parser_no_fn = CorpusParser({}, self.mock_logger)
         
-        with pytest.raises(FileNotFoundError, match="FrameNet corpus path not configured"):
+        with pytest.raises(FileNotFoundError, match="framenet corpus path not configured"):
             parser_no_fn.parse_framenet_files()
 
     def test_parse_framenet_files_empty(self):
@@ -334,7 +334,7 @@ class TestCorpusParser:
         """Test parse_propbank_files with missing PropBank path."""
         parser_no_pb = CorpusParser({}, self.mock_logger)
         
-        with pytest.raises(FileNotFoundError, match="PropBank corpus path not configured"):
+        with pytest.raises(FileNotFoundError, match="propbank corpus path not configured"):
             parser_no_pb.parse_propbank_files()
 
     def test_parse_propbank_files_with_frame(self):
@@ -381,7 +381,7 @@ class TestCorpusParser:
         """Test parse_ontonotes_files with missing OntoNotes path."""
         parser_no_on = CorpusParser({}, self.mock_logger)
         
-        with pytest.raises(FileNotFoundError, match="OntoNotes corpus path not configured"):
+        with pytest.raises(FileNotFoundError, match="ontonotes corpus path not configured"):
             parser_no_on.parse_ontonotes_files()
 
     def test_parse_ontonotes_data(self):
@@ -417,7 +417,7 @@ class TestCorpusParser:
         """Test parse_wordnet_files with missing WordNet path."""
         parser_no_wn = CorpusParser({}, self.mock_logger)
         
-        with pytest.raises(FileNotFoundError, match="WordNet corpus path not configured"):
+        with pytest.raises(FileNotFoundError, match="wordnet corpus path not configured"):
             parser_no_wn.parse_wordnet_files()
 
     def test_parse_wordnet_data_file(self):
@@ -471,7 +471,7 @@ better good well"""
         """Test parse_bso_mappings with missing BSO path."""
         parser_no_bso = CorpusParser({}, self.mock_logger)
         
-        with pytest.raises(FileNotFoundError, match="BSO corpus path not configured"):
+        with pytest.raises(FileNotFoundError, match="bso corpus path not configured"):
             parser_no_bso.parse_bso_mappings()
 
     def test_load_bso_mappings(self):
@@ -537,7 +537,7 @@ test-1.1,Motion,Test motion category"""
         """Test parse_semnet_data with missing SemNet path."""
         parser_no_semnet = CorpusParser({}, self.mock_logger)
         
-        with pytest.raises(FileNotFoundError, match="SemNet corpus path not configured"):
+        with pytest.raises(FileNotFoundError, match="semnet corpus path not configured"):
             parser_no_semnet.parse_semnet_data()
 
     def test_parse_semnet_data_with_files(self):
@@ -575,7 +575,7 @@ test-1.1,Motion,Test motion category"""
         """Test parse_reference_docs with missing path."""
         parser_no_ref = CorpusParser({}, self.mock_logger)
         
-        with pytest.raises(FileNotFoundError, match="Reference docs corpus path not configured"):
+        with pytest.raises(FileNotFoundError, match="reference_docs corpus path not configured"):
             parser_no_ref.parse_reference_docs()
 
     def test_parse_reference_docs_with_files(self):

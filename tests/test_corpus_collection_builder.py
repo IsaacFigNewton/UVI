@@ -130,7 +130,7 @@ class TestCorpusCollectionBuilder(unittest.TestCase):
         self.assertIn('predicates', self.builder.reference_collections)
         self.assertEqual(len(self.builder.reference_collections['predicates']), 3)
         self.assertIn('cause', self.builder.reference_collections['predicates'])
-        self.mock_logger.info.assert_called_with("Built predicate definitions: 3 predicates")
+        self.mock_logger.info.assert_called_with("Built predicate definitions: 3 items")
     
     def test_build_predicate_definitions_no_reference_docs(self):
         """Test building predicate definitions when reference docs are missing."""
@@ -162,7 +162,7 @@ class TestCorpusCollectionBuilder(unittest.TestCase):
         self.assertIn('themroles', self.builder.reference_collections)
         self.assertEqual(len(self.builder.reference_collections['themroles']), 3)
         self.assertIn('Agent', self.builder.reference_collections['themroles'])
-        self.mock_logger.info.assert_called_with("Built thematic role definitions: 3 roles")
+        self.mock_logger.info.assert_called_with("Built thematic role definitions: 3 items")
     
     def test_build_themrole_definitions_no_reference_docs(self):
         """Test building thematic role definitions when reference docs are missing."""
@@ -170,7 +170,7 @@ class TestCorpusCollectionBuilder(unittest.TestCase):
         result = builder.build_themrole_definitions()
         
         self.assertFalse(result)
-        self.mock_logger.warning.assert_called_with("Reference docs not loaded, cannot build themrole definitions")
+        self.mock_logger.warning.assert_called_with("Reference docs not loaded, cannot build thematic role definitions")
     
     def test_build_themrole_definitions_exception(self):
         """Test handling of exceptions in build_themrole_definitions."""
@@ -182,7 +182,7 @@ class TestCorpusCollectionBuilder(unittest.TestCase):
         self.assertFalse(result)
         self.mock_logger.error.assert_called()
         call_args = self.mock_logger.error.call_args[0][0]
-        self.assertIn("Error building themrole definitions:", call_args)
+        self.assertIn("Error building thematic role definitions:", call_args)
     
     def test_build_verb_specific_features_success(self):
         """Test successful building of verb-specific features."""
@@ -252,7 +252,7 @@ class TestCorpusCollectionBuilder(unittest.TestCase):
         restrictions = self.builder.reference_collections['syntactic_restrictions']
         expected_restrictions = ['adj', 'np', 'pp', 'vp']
         self.assertEqual(sorted(restrictions), expected_restrictions)
-        self.mock_logger.info.assert_called_with("Built syntactic restrictions: 4 restrictions")
+        self.mock_logger.info.assert_called_with("Built syntactic restrictions: 4 items")
     
     def test_build_syntactic_restrictions_no_verbnet(self):
         """Test building syntactic restrictions with no VerbNet data."""
@@ -262,7 +262,7 @@ class TestCorpusCollectionBuilder(unittest.TestCase):
         
         self.assertTrue(result)
         self.assertEqual(builder.reference_collections['syntactic_restrictions'], [])
-        self.mock_logger.info.assert_called_with("Built syntactic restrictions: 0 restrictions")
+        self.mock_logger.info.assert_called_with("Built syntactic restrictions: 0 items")
     
     def test_build_syntactic_restrictions_exception(self):
         """Test handling of exceptions in build_syntactic_restrictions."""
@@ -285,7 +285,7 @@ class TestCorpusCollectionBuilder(unittest.TestCase):
         restrictions = self.builder.reference_collections['selectional_restrictions']
         expected_restrictions = ['abstract', 'animate', 'concrete', 'human']
         self.assertEqual(sorted(restrictions), expected_restrictions)
-        self.mock_logger.info.assert_called_with("Built selectional restrictions: 4 restrictions")
+        self.mock_logger.info.assert_called_with("Built selectional restrictions: 4 items")
     
     def test_build_selectional_restrictions_no_verbnet(self):
         """Test building selectional restrictions with no VerbNet data."""
@@ -295,7 +295,7 @@ class TestCorpusCollectionBuilder(unittest.TestCase):
         
         self.assertTrue(result)
         self.assertEqual(builder.reference_collections['selectional_restrictions'], [])
-        self.mock_logger.info.assert_called_with("Built selectional restrictions: 0 restrictions")
+        self.mock_logger.info.assert_called_with("Built selectional restrictions: 0 items")
     
     def test_build_selectional_restrictions_exception(self):
         """Test handling of exceptions in build_selectional_restrictions."""

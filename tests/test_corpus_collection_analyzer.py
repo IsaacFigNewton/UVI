@@ -246,7 +246,7 @@ class TestCorpusCollectionAnalyzer(unittest.TestCase):
             'verbnet': None,  # This will cause an exception
             'framenet': {
                 'statistics': {'valid_stat': 100},
-                'frames': 'not_a_dict'  # This will count string length, not fail
+                'frames': 'not_a_dict'  # Strings are not counted as collections, returns 0
             },
             'propbank': {
                 'predicates': {'pred1': {}},  # This should work fine
@@ -264,10 +264,10 @@ class TestCorpusCollectionAnalyzer(unittest.TestCase):
         self.assertIn('verbnet', statistics)
         self.assertIn('error', statistics['verbnet'])
         
-        # FrameNet won't error - it will count string length as frames count
+        # FrameNet won't error - strings are treated as non-collections (returns 0)
         self.assertIn('framenet', statistics)
         self.assertEqual(statistics['framenet']['valid_stat'], 100)
-        self.assertEqual(statistics['framenet']['frames'], 10)  # len('not_a_dict')
+        self.assertEqual(statistics['framenet']['frames'], 0)  # strings return 0, not string length
         self.assertEqual(statistics['framenet']['lexical_units'], 0)  # len({}) default
         
         # PropBank should work fine
@@ -390,7 +390,7 @@ class TestCorpusCollectionAnalyzer(unittest.TestCase):
         edge_case_data = {
             'verbnet': {
                 'statistics': {'existing_stat': 100},
-                'classes': None,  # This should cause an exception when len() is called
+                'classes': None,  # None is handled gracefully, returns 0
                 'members': {'verb1': {}}
             }
         }
@@ -401,9 +401,11 @@ class TestCorpusCollectionAnalyzer(unittest.TestCase):
         
         statistics = analyzer.get_collection_statistics()
         
-        # Should handle the exception and return error
+        # None is handled gracefully, no exception thrown
         self.assertIn('verbnet', statistics)
-        self.assertIn('error', statistics['verbnet'])
+        self.assertEqual(statistics['verbnet']['existing_stat'], 100)
+        self.assertEqual(statistics['verbnet']['classes'], 0)  # None returns 0
+        self.assertEqual(statistics['verbnet']['members'], 1)  # dict with 1 item
     
     def test_framenet_statistics_edge_cases(self):
         """Test FrameNet statistics with edge cases."""
@@ -411,7 +413,7 @@ class TestCorpusCollectionAnalyzer(unittest.TestCase):
             'framenet': {
                 'statistics': {'valid_stat': 200},
                 'frames': {'frame1': {}, 'frame2': {}},
-                'lexical_units': 'not_a_dict'  # This will count string length
+                'lexical_units': 'not_a_dict'  # Strings are not counted as collections, returns 0
             }
         }
         
@@ -421,11 +423,11 @@ class TestCorpusCollectionAnalyzer(unittest.TestCase):
         
         statistics = analyzer.get_collection_statistics()
         
-        # Should count string length for lexical_units
+        # Strings are treated as non-collections, return 0
         self.assertIn('framenet', statistics)
         self.assertEqual(statistics['framenet']['valid_stat'], 200)
         self.assertEqual(statistics['framenet']['frames'], 2)
-        self.assertEqual(statistics['framenet']['lexical_units'], 10)  # len('not_a_dict')
+        self.assertEqual(statistics['framenet']['lexical_units'], 0)  # strings return 0, not string length
     
     def test_framenet_actual_exception_case(self):
         """Test FrameNet statistics with data that actually causes an exception."""
@@ -450,13 +452,42 @@ class TestCorpusCollectionAnalyzer(unittest.TestCase):
         self.assertIn('framenet', statistics)
         self.assertIn('error', statistics['framenet'])
     
+    def test_actual_exception_with_bad_corpus_data(self):
+        """Test exception handling with corpus data that causes actual exceptions."""
+        # Create a mock object that will raise an exception during statistics processing
+        class BadCorpusData:
+            def get(self, key, default=None):
+                if key == 'statistics':
+                    return {'existing_stat': 100}
+                elif key in ['classes', 'members', 'frames', 'lexical_units', 'predicates', 'rolesets']:
+                    raise RuntimeError("Simulated processing error")
+                return default
+        
+        problematic_data = {
+            'verbnet': BadCorpusData(),  # This will cause an exception during processing
+            'framenet': BadCorpusData(),  # This will also cause an exception
+            'propbank': BadCorpusData()   # This will also cause an exception
+        }
+        
+        analyzer = CorpusCollectionAnalyzer(
+            problematic_data, {}, {}, {}, {}
+        )
+        
+        statistics = analyzer.get_collection_statistics()
+        
+        # All should have errors due to exceptions during processing
+        for corpus in ['verbnet', 'framenet', 'propbank']:
+            self.assertIn(corpus, statistics)
+            self.assertIn('error', statistics[corpus])
+            self.assertIn('Simulated processing error', statistics[corpus]['error'])
+    
     def test_propbank_statistics_edge_cases(self):
         """Test PropBank statistics with edge cases."""
         edge_case_data = {
             'propbank': {
                 'statistics': {'valid_stat': 300},
                 'predicates': {'pred1': {}, 'pred2': {}},
-                'rolesets': None  # This will cause an exception
+                'rolesets': None  # None is handled gracefully, returns 0
             }
         }
         
@@ -466,9 +497,11 @@ class TestCorpusCollectionAnalyzer(unittest.TestCase):
         
         statistics = analyzer.get_collection_statistics()
         
-        # Should handle the exception and return error
+        # None is handled gracefully, no exception thrown
         self.assertIn('propbank', statistics)
-        self.assertIn('error', statistics['propbank'])
+        self.assertEqual(statistics['propbank']['valid_stat'], 300)
+        self.assertEqual(statistics['propbank']['predicates'], 2)  # dict with 2 items
+        self.assertEqual(statistics['propbank']['rolesets'], 0)  # None returns 0
     
     def test_comprehensive_integration(self):
         """Test comprehensive integration of all methods."""
