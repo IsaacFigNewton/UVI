@@ -712,15 +712,41 @@ class CorpusParser:
             'fe_relations': []
         }
         
-        # Parse frame-to-frame relations
-        for relation in root.findall('.//frameRelation'):
-            relation_data = self._extract_xml_element_data(relation, ['type', 'superFrame', 'subFrame'])
-            relations_data['frame_relations'].append(relation_data)
+        # Define FrameNet namespace
+        fn_namespace = {'fn': 'http://framenet.icsi.berkeley.edu'}
         
-        # Parse frame element relations
-        for fe_relation in root.findall('.//feRelation'):
-            fe_relation_data = self._extract_xml_element_data(fe_relation, ['type', 'superFE', 'subFE', 'frameRelation'])
-            relations_data['fe_relations'].append(fe_relation_data)
+        # Try parsing with namespace first (real FrameNet data)
+        frame_relation_types = root.findall('.//fn:frameRelationType', fn_namespace)
+        if frame_relation_types:
+            # Parse frame-to-frame relations with namespace support
+            for relation_type in frame_relation_types:
+                relation_type_name = relation_type.get('name', '')
+                
+                for relation in relation_type.findall('.//fn:frameRelation', fn_namespace):
+                    relation_data = {
+                        'type': relation_type_name,
+                        'ID': relation.get('ID', ''),
+                        'subID': relation.get('subID', ''),
+                        'supID': relation.get('supID', ''),
+                        'subFrameName': relation.get('subFrameName', ''),
+                        'superFrameName': relation.get('superFrameName', '')
+                    }
+                    relations_data['frame_relations'].append(relation_data)
+            
+            # Parse frame element relations with namespace support
+            for fe_relation in root.findall('.//fn:feRelation', fn_namespace):
+                fe_relation_data = self._extract_xml_element_data(fe_relation, ['type', 'superFE', 'subFE', 'frameRelation'])
+                relations_data['fe_relations'].append(fe_relation_data)
+        else:
+            # Fallback for non-namespaced XML (tests)
+            for relation in root.findall('.//frameRelation'):
+                relation_data = self._extract_xml_element_data(relation, ['type', 'superFrame', 'subFrame'])
+                relations_data['frame_relations'].append(relation_data)
+            
+            # Parse frame element relations without namespace
+            for fe_relation in root.findall('.//feRelation'):
+                fe_relation_data = self._extract_xml_element_data(fe_relation, ['type', 'superFE', 'subFE', 'frameRelation'])
+                relations_data['fe_relations'].append(fe_relation_data)
         
         return relations_data
 
