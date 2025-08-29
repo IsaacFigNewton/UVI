@@ -11,7 +11,6 @@ Refactor the monolithic UVI.py (126 methods) into a modular architecture using 7
 - `search_lemmas(lemmas, include_resources, logic, sort_behavior)` - Cross-corpus lemma search
 - `search_by_semantic_pattern(pattern_type, pattern_value, target_resources)` - Semantic pattern matching
 - `search_by_attribute(attribute_type, query_string, target_resources)` - Attribute-based search
-- `search_by_reference_type(reference_type, query_value, target_resources)` - **NEW** - Search within reference collections
 - `_search_lemmas_in_corpus(normalized_lemmas, corpus_name, logic)` - Per-corpus lemma search
 - `_search_semantic_pattern_in_corpus(pattern_type, pattern_value, corpus_name)` - Per-corpus pattern search
 - `_search_attribute_in_corpus(attribute_type, query_string, corpus_name)` - Per-corpus attribute search
@@ -451,7 +450,6 @@ class CorpusRetriever(BaseHelper):
 - `find_related_entries(entry_id, source_corpus, max_depth)` - **ENHANCES UVI lines 1349-1400** with validation-aware discovery
 - `trace_semantic_path(start_entry, end_entry, max_hops)` - Semantic path tracing
 - `get_complete_semantic_profile(lemma)` - Comprehensive semantic profiling
-- `validate_cross_reference_integrity(source_corpus, target_corpus)` - **NEW** - CorpusCollectionValidator integration
 - `_initialize_cross_reference_system_with_validator()` - **REPLACES UVI lines 2298-2397** with validator-based initialization
 - `_build_validated_cross_references(valid_corpora)` - **NEW** - Build cross-references from validated data only
 - `_build_semantic_graph()` - Semantic network construction
@@ -652,14 +650,7 @@ class UVI:
 - `validate_corpus_schemas(corpus_names)` - **REPLACES UVI lines 1887-1954** with CorpusCollectionValidator delegation
 - `validate_xml_corpus(corpus_name)` - **REPLACES UVI lines 1956-1982** with CorpusCollectionValidator delegation
 - `check_data_integrity()` - **ENHANCES UVI lines 1984-2036** with CorpusCollectionValidator integration
-- `validate_collections()` - **NEW** - Direct CorpusCollectionValidator.validate_collections() delegation
-- `validate_cross_references()` - **NEW** - Direct CorpusCollectionValidator.validate_cross_references() delegation
-- `validate_verbnet_collection(verbnet_data)` - **NEW** - CorpusCollectionValidator._validate_verbnet_collection()
-- `validate_framenet_collection(framenet_data)` - **NEW** - CorpusCollectionValidator._validate_framenet_collection()
-- `validate_propbank_collection(propbank_data)` - **NEW** - CorpusCollectionValidator._validate_propbank_collection()
-- `validate_vn_pb_mappings()` - **NEW** - CorpusCollectionValidator._validate_vn_pb_mappings()
 - `_validate_entry_schema_with_validator(entry_id, corpus)` - **REPLACES UVI lines 3083-3151** with CorpusCollectionValidator logic
-- `_init_collection_validator()` - **NEW** - Lazy CorpusCollectionValidator initialization
 
 **Constructor Integration:**
 ```python
@@ -1452,20 +1443,6 @@ class ParsingEngine(BaseHelper):
 - `get_member_classes(member_name)` - Member class lookup
 - `_build_class_hierarchy(class_id, verbnet_data)` - Hierarchy construction
 
-### 9. AnalyticsManager (NEW - CorpusCollectionAnalyzer Integration Hub)
-**Purpose:** Centralized analytics and system insights via CorpusCollectionAnalyzer
-**Methods:**
-- `get_collection_statistics()` - **NEW** - Direct CorpusCollectionAnalyzer.get_collection_statistics() delegation
-- `get_build_metadata()` - **NEW** - Direct CorpusCollectionAnalyzer.get_build_metadata() delegation
-- `get_corpus_health_report(corpus_name)` - **NEW** - Comprehensive health analysis combining validation and statistics
-- `get_system_overview()` - **NEW** - System-wide statistics and status dashboard
-- `analyze_corpus_coverage(corpus_name)` - **NEW** - Coverage analysis using collection statistics
-- `analyze_cross_reference_completeness()` - **NEW** - Cross-reference coverage analysis
-- `generate_analytics_report(format, include_sections)` - **NEW** - Comprehensive analytics export
-- `compare_collection_versions(version1, version2)` - **NEW** - Collection version comparison
-- `get_performance_metrics()` - **NEW** - Load times, parsing speeds, validation performance
-- `_integrate_collection_analyzer()` - **NEW** - CorpusCollectionAnalyzer initialization and integration
-
 **Constructor Integration:**
 ```python
 class AnalyticsManager(BaseHelper):
@@ -1668,25 +1645,6 @@ def get_collection_statistics(self): return analyzer.get_collection_statistics()
 def generate_analytics_report(self): return comprehensive_report_with_analyzer()
 ```
 
-### Code Elimination Benefits
-
-**Eliminated Duplicate Analytics (98 lines total):**
-- **UVI lines 4247-4260**: `_calculate_search_statistics()` → Enhanced SearchEngine method
-- **UVI lines 4444-4458**: `_calculate_pattern_statistics()` → Enhanced SearchEngine method  
-- **UVI lines 4575-4589**: `_calculate_attribute_statistics()` → Enhanced SearchEngine method
-- **UVI lines 178-192**: `get_corpus_info()` → Enhanced AnalyticsManager method
-
-**Enhanced Export Methods (160+ lines affected):**
-- **UVI lines 2043-2105**: `export_resources()` → Enhanced with collection statistics
-- **UVI lines 2107-2137**: `export_cross_corpus_mappings()` → Enhanced with analytics metadata
-- **UVI lines 2139-2172**: `export_semantic_profile()` → Enhanced with completeness analysis
-
-**Centralized Analytics Capabilities:**
-- **NEW**: `analyze_corpus_coverage(lemma)` → Analyze lemma presence using collection context
-- **NEW**: `generate_analytics_report()` → Comprehensive report using CorpusCollectionAnalyzer
-- **NEW**: Collection size comparisons and growth tracking
-- **NEW**: Reference collection analysis and health monitoring
-
 ### Integration Implementation Plan
 
 **Phase 1: CorpusCollectionAnalyzer Integration**
@@ -1727,25 +1685,6 @@ def generate_analytics_report(self):
 def get_enhanced_collection_statistics(self):
     return self.analytics_manager.get_collection_statistics()
 ```
-
-### Performance & Memory Benefits
-
-**Centralized Analytics:**
-- Single CorpusCollectionAnalyzer instance per helper handles all analytics
-- Shared collection size calculation utilities
-- Common error handling patterns for statistics
-- Standardized metadata format across all analytics
-
-**Memory Efficiency:**
-- No duplicate statistics data structures across helpers
-- Single analytics metadata cache via CorpusCollectionAnalyzer
-- Helper classes reference shared analytics instead of calculating separately
-
-**Enhanced Functionality:**
-- **Coverage Analysis**: Calculate search/export coverage as percentage of total collections
-- **Profile Completeness**: Score semantic profile depth and breadth across corpora
-- **Mapping Coverage**: Analyze cross-corpus mapping completeness percentages
-- **Collection Health**: Monitor collection integrity and growth over time
 
 ## Implementation Strategy
 
@@ -1819,36 +1758,11 @@ def get_propbank_frame(self, lemma, ...)               # Lines 695-766
 # Maintain existing logic, just change data source
 ```
 
-## Benefits
-
-### Code Organization
-- **Reduced complexity:** Main UVI class drops from 126 to ~15 core methods
-- **Logical grouping:** Related functionality clustered in focused classes
-- **Maintainability:** Easier to locate and modify specific functionality
-
-### Performance
-- **Lazy loading:** Helper classes can implement lazy initialization
-- **Caching:** Helper-specific caching strategies
-- **Parallelization:** Independent helpers can run operations concurrently
-
-### Extensibility
-- **Plugin architecture:** New helpers can be added without modifying core
-- **Corpus-specific optimizations:** Helpers can implement corpus-specific logic
-- **Testing isolation:** Each helper can be unit tested independently
-
 ## CorpusCollectionBuilder Integration Summary
 
 ### Overall Strategy: Eliminate Collection Building Duplication
 
 The CorpusCollectionBuilder class (292 lines) provides specialized functionality for building reference collections that UVI currently duplicates across multiple methods (304+ lines total). This integration eliminates duplication while centralizing and optimizing collection building operations.
-
-**Key Benefits:**
-- **Eliminate 304+ lines** of duplicate collection building code from UVI
-- **Centralize** reference collection building in a specialized, optimized class  
-- **Standardize** collection building patterns via template methods
-- **Improve** performance through CorpusCollectionBuilder's optimized extraction algorithms
-- **Enhance** validation and consistency checking of reference data
-- **Enable** advanced search capabilities across reference collections
 
 ### Specific CorpusCollectionBuilder Method Utilizations
 
@@ -2049,23 +1963,6 @@ def validate_xml_corpus(self, corpus_name):
     }
 ```
 
-### Performance & Memory Benefits
-
-**Eliminated Duplication:**
-- Remove ~400 lines of duplicate XML parsing code from UVI
-- Remove ~200 lines of duplicate validation logic from UVI
-- Remove ~100 lines of duplicate hierarchy building code from UVI
-
-**Centralized Parsing:**
-- Single CorpusParser instance handles all corpus types
-- Shared XML/JSON/CSV parsing utilities
-- Common error handling patterns
-- Standardized statistics collection
-
-**Memory Efficiency:**
-- No duplicate parsing data structures
-- Single parsed data cache via CorpusParser
-- Helper classes reference shared data instead of copying
 
 ## Backward Compatibility
 - **Interface preservation:** All existing public methods remain accessible
