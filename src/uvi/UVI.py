@@ -17,7 +17,16 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Union, Any, Tuple
 import os
-from .corpus_loader import CorpusLoader
+from .corpus_loader import CorpusLoader, CorpusParser
+from .BaseHelper import BaseHelper
+from .SearchEngine import SearchEngine
+from .CorpusRetriever import CorpusRetriever
+from .CrossReferenceManager import CrossReferenceManager
+from .ReferenceDataProvider import ReferenceDataProvider
+from .ValidationManager import ValidationManager
+from .ExportManager import ExportManager
+from .AnalyticsManager import AnalyticsManager
+from .ParsingEngine import ParsingEngine
 
 
 class UVI:
@@ -63,6 +72,12 @@ class UVI:
             'verbnet', 'framenet', 'propbank', 'ontonotes', 'wordnet',
             'bso', 'semnet', 'reference_docs', 'vn_api'
         ]
+        
+        # Initialize CorpusParser for enhanced parsing operations
+        self.corpus_parser = CorpusParser(self.corpus_paths, self._get_logger())
+        
+        # Initialize all helper classes with CorpusLoader integration
+        self._initialize_helper_classes()
         
         # Load corpora if requested
         if load_all:
@@ -137,6 +152,55 @@ class UVI:
             else:
                 print(f"Corpus not found: {corpus_path}")
     
+    def _get_logger(self):
+        """Get logger instance for UVI operations."""
+        import logging
+        logger = logging.getLogger('uvi')
+        if not logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+            logger.setLevel(logging.INFO)
+        return logger
+        
+    def _initialize_helper_classes(self) -> None:
+        """
+        Initialize all helper classes with CorpusLoader integration.
+        
+        This creates the modular architecture described in TODO.md, where each helper
+        class specializes in specific functionality while maintaining unified access.
+        """
+        # Initialize helper classes in dependency order
+        try:
+            # Core parsing and analytics (no dependencies on other helpers)
+            self.parsing_engine = ParsingEngine(self)
+            self.analytics_manager = AnalyticsManager(self)
+            
+            # Reference data provider (depends on CorpusCollectionBuilder)
+            self.reference_data_provider = ReferenceDataProvider(self)
+            
+            # Validation manager (depends on CorpusCollectionValidator)
+            self.validation_manager = ValidationManager(self)
+            
+            # Search engine (depends on CorpusCollectionAnalyzer)
+            self.search_engine = SearchEngine(self)
+            
+            # Corpus retriever (depends on CorpusParser and CorpusCollectionBuilder)
+            self.corpus_retriever = CorpusRetriever(self)
+            
+            # Cross-reference manager (depends on CorpusCollectionValidator)
+            self.cross_reference_manager = CrossReferenceManager(self)
+            
+            # Export manager (depends on CorpusCollectionAnalyzer)
+            self.export_manager = ExportManager(self)
+            
+            print("Successfully initialized all helper classes with CorpusLoader integration")
+            
+        except Exception as e:
+            print(f"Warning: Failed to initialize some helper classes: {e}")
+            # Continue without helpers - UVI will still function with core capabilities
+        
     def _load_all_corpora(self) -> None:
         """
         Load all available corpora that have valid paths.
