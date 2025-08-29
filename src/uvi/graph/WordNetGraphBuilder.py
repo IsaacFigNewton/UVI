@@ -6,18 +6,24 @@ from WordNet's top-level ontological categories and their hierarchical relations
 """
 
 import networkx as nx
+from typing import Dict, Any, Tuple, Optional, List
+
 from .GraphBuilder import GraphBuilder
 
 
 class WordNetGraphBuilder(GraphBuilder):
     """Specialized graph builder for WordNet semantic hierarchies."""
     
+    def __init__(self):
+        """Initialize the WordNetGraphBuilder."""
+        super().__init__()
+    
     def create_wordnet_graph(
         self,
-        wordnet_data,
-        num_categories=6,
-        max_children_per_category=4
-    ):
+        wordnet_data: Dict[str, Any],
+        num_categories: int = 6,
+        max_children_per_category: int = 4
+    ) -> Tuple[Optional[nx.DiGraph], Dict[str, Any]]:
         """
         Create a semantic graph using WordNet's top-level ontological categories.
         
@@ -42,8 +48,74 @@ class WordNetGraphBuilder(GraphBuilder):
         print(f"Found {len(noun_synsets)} noun synsets")
         
         # Define known top-level WordNet ontological categories
-        # These are well-known top-level concepts in WordNet's noun hierarchy
-        top_level_concepts = [
+        top_level_concepts = self._get_top_level_concepts()
+        
+        # Create graph and hierarchy
+        G = nx.DiGraph()
+        hierarchy = {}
+        
+        # Add top-level categories and find their children
+        selected_concepts = top_level_concepts[:num_categories]
+        root_nodes = []
+        
+        for synset_id, main_word, definition in selected_concepts:
+            synset_data = noun_synsets.get(synset_id)
+            if not synset_data:
+                continue
+                
+            # Add category node using base class method
+            self.add_node_with_hierarchy(
+                G, hierarchy, main_word,
+                node_type='category',
+                info={
+                    'node_type': 'category',
+                    'synset_id': synset_id,
+                    'words': self._get_synset_words(synset_data),
+                    'definition': definition or synset_data.get('gloss', 'No definition available')
+                }
+            )
+            root_nodes.append(main_word)
+            
+            # Find and add children synsets
+            children = self._find_category_children(
+                noun_synsets, synset_id, main_word, max_children_per_category
+            )
+            
+            for child_id, child_word, child_def in children:
+                child_name = f"{child_word}"
+                
+                # Add child node using base class method
+                self.add_node_with_hierarchy(
+                    G, hierarchy, child_name,
+                    node_type='synset',
+                    parents=[main_word],
+                    info={
+                        'node_type': 'synset',
+                        'synset_id': child_id,
+                        'words': child_word,
+                        'definition': child_def,
+                        'parent_category': main_word
+                    }
+                )
+        
+        # Add some demo category connections for better layout
+        self._add_category_connections(G, hierarchy, root_nodes)
+        
+        # Calculate node depths using base class method
+        self.calculate_node_depths(G, hierarchy, root_nodes)
+        
+        # Display statistics using base class method with custom stats
+        custom_stats = {
+            'Categories': len([n for n in G.nodes() if G.nodes[n].get('node_type') == 'category']),
+            'Synsets': len([n for n in G.nodes() if G.nodes[n].get('node_type') == 'synset'])
+        }
+        self.display_graph_statistics(G, hierarchy, custom_stats)
+        
+        return G, hierarchy
+    
+    def _get_top_level_concepts(self) -> List[Tuple[str, str, str]]:
+        """Get the list of top-level WordNet ontological categories."""
+        return [
             ('00001740', 'entity', 'that which is perceived or known or inferred to have its own distinct existence'),
             ('00001930', 'physical_entity', 'an entity that has physical existence'),
             ('00002137', 'abstraction', 'a general concept formed by extracting common features'),
@@ -53,74 +125,8 @@ class WordNetGraphBuilder(GraphBuilder):
             ('00023271', 'natural_object', 'an object occurring naturally'),
             ('00031264', 'artifact', 'a man-made object taken as a whole'),
         ]
-        
-        # Create graph and hierarchy
-        G = nx.DiGraph()
-        hierarchy = {}
-        
-        # Add top-level categories and find their children
-        selected_concepts = top_level_concepts[:num_categories]
-        
-        for i, (synset_id, main_word, definition) in enumerate(selected_concepts):
-            synset_data = noun_synsets.get(synset_id)
-            if not synset_data:
-                continue
-                
-            # Add category node
-            G.add_node(main_word, node_type='category')
-            
-            # Create hierarchy entry for category
-            hierarchy[main_word] = {
-                'parents': [],
-                'children': [],
-                'synset_info': {
-                    'synset_id': synset_id,
-                    'words': self._get_synset_words(synset_data),
-                    'definition': definition or synset_data.get('gloss', 'No definition available'),
-                    'node_type': 'category'
-                }
-            }
-            
-            # Find and add children synsets (simulate hyponym relationships)
-            children = self._find_category_children(
-                noun_synsets, synset_id, main_word, max_children_per_category
-            )
-            
-            for child_id, child_word, child_def in children:
-                child_name = f"{child_word}"
-                
-                # Add child node
-                G.add_node(child_name, node_type='synset')
-                G.add_edge(main_word, child_name)
-                
-                # Create hierarchy entry for child
-                hierarchy[child_name] = {
-                    'parents': [main_word],
-                    'children': [],
-                    'synset_info': {
-                        'synset_id': child_id,
-                        'words': child_word,
-                        'definition': child_def,
-                        'parent_category': main_word,
-                        'node_type': 'synset'
-                    }
-                }
-                
-                # Update parent's children list
-                hierarchy[main_word]['children'].append(child_name)
-        
-        # Add some demo category connections for better layout
-        self._add_category_connections(G, hierarchy, [concept[1] for concept in selected_concepts])
-        
-        # Calculate node depths
-        self._calculate_node_depths(G, hierarchy, [concept[1] for concept in selected_concepts])
-        
-        # Display statistics
-        self._display_graph_statistics(G, hierarchy)
-        
-        return G, hierarchy
     
-    def _get_synset_words(self, synset_data):
+    def _get_synset_words(self, synset_data: Dict[str, Any]) -> List[str]:
         """Extract words from a synset."""
         words = synset_data.get('words', [])
         if isinstance(words, list) and words:
@@ -129,7 +135,13 @@ class WordNetGraphBuilder(GraphBuilder):
             return words
         return ['unknown']
     
-    def _find_category_children(self, noun_synsets, parent_id, parent_word, max_children):
+    def _find_category_children(
+        self,
+        noun_synsets: Dict[str, Any],
+        parent_id: str,
+        parent_word: str,
+        max_children: int
+    ) -> List[Tuple[str, str, str]]:
         """Find children for a category (simulated based on semantic similarity)."""
         children = []
         
@@ -189,7 +201,12 @@ class WordNetGraphBuilder(GraphBuilder):
         
         return children
     
-    def _add_category_connections(self, G, hierarchy, categories):
+    def _add_category_connections(
+        self,
+        G: nx.DiGraph,
+        hierarchy: Dict[str, Any],
+        categories: List[str]
+    ) -> None:
         """Add connections between related categories."""
         # Add some conceptual connections between categories
         connections = [
@@ -200,41 +217,19 @@ class WordNetGraphBuilder(GraphBuilder):
         
         for parent, child in connections:
             if parent in categories and child in categories:
-                if not G.has_edge(parent, child):
-                    G.add_edge(parent, child)
-                    hierarchy[parent]['children'].append(child)
-                    hierarchy[child]['parents'].append(parent)
+                self.connect_nodes(G, hierarchy, parent, child)
     
-    def _display_graph_statistics(self, G, hierarchy):
-        """Display graph statistics and sample information."""
-        print(f"Graph statistics:")
-        print(f"  Nodes: {G.number_of_nodes()}")
-        print(f"  Edges: {G.number_of_edges()}")
-        
-        # Count node types
-        categories = [n for n in G.nodes() if G.nodes[n].get('node_type') == 'category']
-        synsets = [n for n in G.nodes() if G.nodes[n].get('node_type') == 'synset']
-        
-        print(f"  Categories: {len(categories)}")
-        print(f"  Synsets: {len(synsets)}")
-        
-        # Show depth distribution
-        depths = [hierarchy[node].get('depth', 0) for node in G.nodes() if node in hierarchy]
-        depth_counts = {}
-        for d in depths:
-            depth_counts[d] = depth_counts.get(d, 0) + 1
-        print(f"  Depth distribution: {dict(sorted(depth_counts.items()))}")
-        
-        # Show sample node information
-        print(f"\nSample node information:")
-        sample_nodes = list(G.nodes())[:3]
-        for node in sample_nodes:
-            if node in hierarchy:
-                synset_info = hierarchy[node]['synset_info']
-                node_type = synset_info.get('node_type', 'synset')
-                if node_type == 'category':
-                    children_count = len(hierarchy[node].get('children', []))
-                    print(f"  {node} (Category): {children_count} children")
-                else:
-                    parent = synset_info.get('parent_category', 'Unknown')
-                    print(f"  {node} (Synset): child of {parent}")
+    def _display_node_info(self, node: str, hierarchy: Dict[str, Any]) -> None:
+        """Display WordNet-specific node information."""
+        if node in hierarchy:
+            synset_info = hierarchy[node].get('synset_info', {})
+            node_type = synset_info.get('node_type', 'synset')
+            
+            if node_type == 'category':
+                children_count = len(hierarchy[node].get('children', []))
+                print(f"  {node} (Category): {children_count} children")
+            else:
+                parent = synset_info.get('parent_category', 'Unknown')
+                print(f"  {node} (Synset): child of {parent}")
+        else:
+            super()._display_node_info(node, hierarchy)

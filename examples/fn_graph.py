@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from uvi import UVI
 from uvi.visualizations import FrameNetVisualizer, InteractiveFrameNetGraph
-from uvi.graph import GraphBuilder
+from uvi.graph import FrameNetGraphBuilder
 
 # Import Matplotlib
 try:
@@ -69,7 +69,7 @@ def main():
         print(f"Found {total_frames} frames in FrameNet")
         
         # Create demo graph with actual FrameNet frames, lexical units, and frame elements
-        graph_builder = GraphBuilder()
+        graph_builder = FrameNetGraphBuilder()
         G, hierarchy = graph_builder.create_framenet_graph(
             framenet_data, num_frames=5, max_lus_per_frame=2, max_fes_per_frame=2
         )

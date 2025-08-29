@@ -5,6 +5,7 @@ This module provides classes and utilities for building graphs from corpus data.
 """
 
 from .GraphBuilder import GraphBuilder
+from .FrameNetGraphBuilder import FrameNetGraphBuilder
 from .WordNetGraphBuilder import WordNetGraphBuilder
 
-__all__ = ['GraphBuilder', 'WordNetGraphBuilder']
+__all__ = ['GraphBuilder', 'FrameNetGraphBuilder', 'WordNetGraphBuilder']
