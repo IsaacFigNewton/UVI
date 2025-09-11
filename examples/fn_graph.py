@@ -29,7 +29,7 @@ from collections import defaultdict
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from uvi import UVI
-from uvi.visualizations import FrameNetVisualizer, InteractiveFrameNetGraph
+from uvi.visualizations import FrameNetVisualizer
 from uvi.graph import FrameNetGraphBuilder
 
 # Import Matplotlib
@@ -86,7 +86,7 @@ def main():
         print("- Close window when finished")
         
         # Create interactive visualization
-        interactive_graph = InteractiveFrameNetGraph(
+        interactive_graph = FrameNetVisualizer(
             G, hierarchy, "FrameNet Frames Demo"
         )
         

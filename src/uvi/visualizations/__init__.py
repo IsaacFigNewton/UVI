@@ -8,7 +8,6 @@ including FrameNet and WordNet visualizations, DAG visualizations, taxonomic hie
 from .Visualizer import Visualizer
 from .InteractiveVisualizer import InteractiveVisualizer
 from .FrameNetVisualizer import FrameNetVisualizer
-from .InteractiveFrameNetGraph import InteractiveFrameNetGraph
 from .WordNetVisualizer import WordNetVisualizer
 
-__all__ = ['Visualizer', 'InteractiveVisualizer', 'FrameNetVisualizer', 'InteractiveFrameNetGraph', 'WordNetVisualizer']
+__all__ = ['Visualizer', 'InteractiveVisualizer', 'FrameNetVisualizer', 'WordNetVisualizer']

@@ -1,18 +1,17 @@
 """
-FrameNet Visualizer Class.
+Interactive FrameNet Graph Visualization.
 
-This module contains the FrameNetVisualizer class that provides FrameNet-specific
-functionality for creating semantic graph visualizations.
+This module contains the InteractiveFrameNetGraph class that provides interactive
+FrameNet semantic graph visualizations with hover, click, and zoom functionality.
 """
 
-from .Visualizer import Visualizer
+from .InteractiveVisualizer import InteractiveVisualizer
 
 
-class FrameNetVisualizer(Visualizer):
-    """FrameNet-specific visualizer with specialized coloring and information display."""
+class FrameNetVisualizer(InteractiveVisualizer):
+    """Interactive FrameNet graph visualization with hover, click, and zoom functionality."""
     
     def __init__(self, G, hierarchy, title="FrameNet Frame Hierarchy"):
-        """Initialize the FrameNet visualizer."""
         super().__init__(G, hierarchy, title)
     
     def get_dag_node_color(self, node):
@@ -140,14 +139,4 @@ class FrameNetVisualizer(Visualizer):
             Patch(facecolor='lightgray', label='Isolated Frames'),
             Patch(facecolor='lightyellow', label='Lexical Units'),
             Patch(facecolor='lightpink', label='Frame Elements')
-        ]
-    
-    def create_taxonomic_legend(self):
-        """Create legend elements for FrameNet taxonomic visualization."""
-        from matplotlib.patches import Patch
-        return [
-            Patch(facecolor='lightblue', label='Root Frames (Depth 0)'),
-            Patch(facecolor='lightgreen', label='Level 1 Frames'),
-            Patch(facecolor='lightyellow', label='Level 2 Frames'),
-            Patch(facecolor='lightcoral', label='Deeper Levels')
         ]
