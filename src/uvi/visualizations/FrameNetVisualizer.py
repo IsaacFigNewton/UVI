@@ -15,7 +15,7 @@ class FrameNetVisualizer(InteractiveVisualizer):
         super().__init__(G, hierarchy, title)
     
     def get_dag_node_color(self, node):
-        """Get color for a node based on DAG properties and FrameNet node type."""
+        """Get color for a node based on FrameNet node type."""
         # Check if node has type information
         node_data = self.G.nodes.get(node, {})
         node_type = node_data.get('node_type', 'frame')
@@ -25,19 +25,8 @@ class FrameNetVisualizer(InteractiveVisualizer):
             return 'lightyellow'  # Lexical units get yellow color
         elif node_type == 'frame_element':
             return 'lightpink'    # Frame elements get pink color
-        
-        # For frames, use DAG-based coloring
-        in_degree = self.G.in_degree(node)
-        out_degree = self.G.out_degree(node)
-        
-        if in_degree == 0 and out_degree > 0:
-            return 'lightblue'    # Source nodes (no parents)
-        elif in_degree > 0 and out_degree == 0:
-            return 'lightcoral'   # Sink nodes (no children)
-        elif in_degree > 0 and out_degree > 0:
-            return 'lightgreen'   # Intermediate nodes
         else:
-            return 'lightgray'    # Isolated nodes
+            return 'lightblue'    # All frames get single blue color
     
     def get_node_info(self, node):
         """Get detailed information about a FrameNet node."""
@@ -129,14 +118,95 @@ class FrameNetVisualizer(InteractiveVisualizer):
         
         return result
     
+    def select_node(self, node):
+        """Select a node and highlight it with neighbor greying."""
+        self.selected_node = node
+        print(f"\n=== Selected Node: {node} ===")
+        print(self.get_node_info(node))
+        print("=" * 40)
+        
+        # Use advanced highlighting instead of basic redraw
+        self._highlight_node(node)
+    
+    def _highlight_node(self, node):
+        """Highlight a selected node and grey out non-neighboring nodes."""
+        import networkx as nx
+        
+        # Clear and redraw with highlighting
+        self.ax.clear()
+        
+        # Get connected nodes
+        predecessors = set(self.G.predecessors(node))
+        successors = set(self.G.successors(node))
+        connected = predecessors | successors | {node}
+        
+        # Draw non-connected nodes with lower alpha (greyed out)
+        unconnected = set(self.G.nodes()) - connected
+        if unconnected:
+            nx.draw_networkx_nodes(self.G, self.pos,
+                                 nodelist=list(unconnected),
+                                 node_color='lightgray',
+                                 node_size=1000,
+                                 alpha=0.3,
+                                 ax=self.ax)
+        
+        # Draw connected nodes with original colors
+        for n in connected:
+            color = self.get_dag_node_color(n)
+            size = 3500 if n == node else 2000
+            nx.draw_networkx_nodes(self.G, self.pos,
+                                 nodelist=[n],
+                                 node_color=color,
+                                 node_size=size,
+                                 alpha=1.0,
+                                 ax=self.ax)
+        
+        # Draw edges
+        for edge in self.G.edges():
+            if edge[0] in connected and edge[1] in connected:
+                nx.draw_networkx_edges(self.G, self.pos,
+                                     edgelist=[edge],
+                                     edge_color='red' if node in edge else 'black',
+                                     width=3 if node in edge else 1.5,
+                                     alpha=0.8,
+                                     arrows=True,
+                                     arrowsize=20,
+                                     ax=self.ax)
+            else:
+                nx.draw_networkx_edges(self.G, self.pos,
+                                     edgelist=[edge],
+                                     edge_color='lightgray',
+                                     width=0.5,
+                                     alpha=0.2,
+                                     arrows=True,
+                                     ax=self.ax)
+        
+        # Draw labels
+        labels = {}
+        for n in self.G.nodes():
+            labels[n] = n
+        
+        nx.draw_networkx_labels(self.G, self.pos,
+                              labels=labels,
+                              font_size=10 if n in connected else 6,
+                              font_weight='bold' if n == node else 'normal',
+                              ax=self.ax)
+        
+        self.ax.set_title(f"{self.title} - Selected: {node}", 
+                         fontsize=14, fontweight='bold')
+        self.ax.axis('off')
+        
+        # Re-add legend
+        legend_elements = self.create_dag_legend()
+        self.ax.legend(handles=legend_elements, loc='upper left', fontsize=10)
+        
+        self.fig.canvas.draw_idle()
+    
     def create_dag_legend(self):
         """Create legend elements for FrameNet DAG visualization."""
         from matplotlib.patches import Patch
         return [
-            Patch(facecolor='lightblue', label='Source Frames (no parents)'),
-            Patch(facecolor='lightgreen', label='Intermediate Frames'),
-            Patch(facecolor='lightcoral', label='Sink Frames (no children)'),
-            Patch(facecolor='lightgray', label='Isolated Frames'),
+            Patch(facecolor='lightblue', label='Frame'),
             Patch(facecolor='lightyellow', label='Lexical Units'),
             Patch(facecolor='lightpink', label='Frame Elements')
         ]

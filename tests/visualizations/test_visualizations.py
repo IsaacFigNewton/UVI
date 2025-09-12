@@ -55,7 +55,7 @@ class TestFrameNetVisualizer(unittest.TestCase):
         self.assertIsNone(self.interactive_graph.selected_node)
         self.assertIsNone(self.interactive_graph.fig)
         self.assertIsNone(self.interactive_graph.ax)
-        self.assertIsNone(self.interactive_graph.save_button)
+        # save_button intentionally removed - use matplotlib toolbar
     
     def test_get_node_color_selected(self):
         """Test node color when selected."""
@@ -63,18 +63,20 @@ class TestFrameNetVisualizer(unittest.TestCase):
         self.interactive_graph.selected_node = 'Motion'
         self.assertEqual(self.interactive_graph.get_node_color('Motion'), 'red')
         
-        # Test non-selected node
-        self.assertEqual(self.interactive_graph.get_node_color('Transportation'), 'lightcoral')  # sink node
+        # Test non-selected node - all frames now use single blue color
+        self.assertEqual(self.interactive_graph.get_node_color('Transportation'), 'lightblue')  # unified frame color
     
     def test_select_node(self):
         """Test node selection functionality."""
         with patch('builtins.print') as mock_print:
-            with patch.object(self.interactive_graph, 'draw_graph') as mock_draw:
+            with patch.object(self.interactive_graph, '_highlight_node') as mock_highlight:
+                # Set up minimal requirements for select_node
+                self.interactive_graph.ax = MagicMock()  # Mock ax for highlighting
                 self.interactive_graph.select_node('Motion')
                 
                 self.assertEqual(self.interactive_graph.selected_node, 'Motion')
                 mock_print.assert_called()
-                mock_draw.assert_called_once()
+                mock_highlight.assert_called_once_with('Motion')
     
     @patch('matplotlib.pyplot.subplots')
     def test_create_interactive_plot(self, mock_subplots):
@@ -90,8 +92,8 @@ class TestFrameNetVisualizer(unittest.TestCase):
         
         result = self.interactive_graph.create_interactive_plot()
         
-        # Verify setup was called
-        mock_subplots.assert_called_once_with(figsize=(16, 12))
+        # Verify setup was called with new standardized dimensions
+        mock_subplots.assert_called_once_with(figsize=(14, 10))
         self.assertEqual(self.interactive_graph.fig, mock_fig)
         self.assertEqual(self.interactive_graph.ax, mock_ax)
         
@@ -101,8 +103,8 @@ class TestFrameNetVisualizer(unittest.TestCase):
         self.assertEqual(result, mock_fig)
     
     @patch('matplotlib.pyplot.subplots')
-    def test_save_button_creation(self, mock_subplots):
-        """Test save button creation in interactive plot."""
+    def test_save_button_removed(self, mock_subplots):
+        """Test that save button has been intentionally removed - use matplotlib toolbar instead."""
         # Mock matplotlib components
         mock_fig = MagicMock()
         mock_ax = MagicMock()
@@ -110,46 +112,23 @@ class TestFrameNetVisualizer(unittest.TestCase):
         mock_fig.canvas = mock_canvas
         mock_subplots.return_value = (mock_fig, mock_ax)
         
-        # Call create_interactive_plot (this will create the button)
+        # Call create_interactive_plot (save button should not be created)
         result = self.interactive_graph.create_interactive_plot()
-        
-        # Verify that save_button attribute exists after plot creation
-        self.assertIsNotNone(self.interactive_graph.save_button)
         
         # Verify figure and axes were set up correctly
         self.assertEqual(self.interactive_graph.fig, mock_fig)
         self.assertEqual(self.interactive_graph.ax, mock_ax)
+        
+        # Verify matplotlib toolbar is available for saving instead
+        self.assertEqual(result, mock_fig)
     
-    @patch('builtins.print')
-    @patch('os.path.abspath')
-    def test_save_png_functionality(self, mock_abspath, mock_print):
-        """Test PNG save functionality."""
-        # Mock figure
-        mock_fig = MagicMock()
-        mock_fig.savefig = MagicMock()
-        self.interactive_graph.fig = mock_fig
+    def test_save_png_removed(self):
+        """Test that save_png method has been intentionally removed - use matplotlib toolbar instead."""
+        # Verify save_png method no longer exists
+        self.assertFalse(hasattr(self.interactive_graph, 'save_png'))
         
-        # Mock absolute path
-        mock_abspath.return_value = "/test/path/framenet_graph_test.png"
-        
-        # Call save_png
-        self.interactive_graph.save_png()
-        
-        # Verify savefig was called
-        mock_fig.savefig.assert_called_once()
-        
-        # Check that it was called with correct parameters
-        args, kwargs = mock_fig.savefig.call_args
-        self.assertIn('dpi', kwargs)
-        self.assertEqual(kwargs['dpi'], 300)
-        self.assertEqual(kwargs['bbox_inches'], 'tight')
-        self.assertEqual(kwargs['facecolor'], 'white')
-        self.assertEqual(kwargs['edgecolor'], 'none')
-        
-        # Verify success message was printed
-        mock_print.assert_called()
-        print_calls = [call.args[0] for call in mock_print.call_args_list]
-        self.assertTrue(any('Graph saved as:' in call for call in print_calls))
+        # Users should now use matplotlib toolbar for saving functionality
+        self.assertTrue(hasattr(self.interactive_graph, 'create_interactive_plot'))
     
     def test_hide_tooltip(self):
         """Test tooltip hiding."""

@@ -203,7 +203,7 @@ class Visualizer:
     
     def create_static_dag_visualization(self, save_path=None):
         """Create a static DAG visualization using matplotlib."""
-        plt.figure(figsize=(16, 12))
+        plt.figure(figsize=(14, 10))
         
         # Create DAG layout
         pos = self.create_dag_layout()
@@ -234,7 +234,7 @@ class Visualizer:
         """Generate a PNG for taxonomic (hierarchical) visualization."""
         print(f"Generating taxonomic PNG visualization...")
         
-        plt.figure(figsize=(16, 12))
+        plt.figure(figsize=(14, 10))
         
         # Create taxonomic layout
         pos = self.create_taxonomic_layout()
@@ -332,12 +332,29 @@ class Visualizer:
             showlegend=False
         ))
         
-        # Update layout
+        # Calculate proper axis ranges for reset functionality
+        if node_x and node_y:
+            x_min, x_max = min(node_x), max(node_x)
+            y_min, y_max = min(node_y), max(node_y)
+            
+            # Add padding for better visibility
+            x_padding = (x_max - x_min) * 0.1 if x_max != x_min else 1.0
+            y_padding = (y_max - y_min) * 0.1 if y_max != y_min else 1.0
+            
+            x_range = [x_min - x_padding, x_max + x_padding]
+            y_range = [y_min - y_padding, y_max + y_padding]
+        else:
+            x_range = [-1, 1]
+            y_range = [-1, 1]
+        
+        # Update layout with proper dimensions and reset functionality
         fig.update_layout(
             title=dict(text=f"DAG {self.title}", x=0.5, font=dict(size=16)),
             showlegend=False,
             hovermode='closest',
             margin=dict(b=20,l=5,r=5,t=40),
+            width=800,  # Reduced from default for better display
+            height=600,  # Reduced from default for better display
             annotations=[
                 dict(
                     text="Hover over nodes for details | Zoom and pan to explore",
@@ -348,8 +365,22 @@ class Visualizer:
                     font=dict(color='gray', size=10)
                 )
             ],
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            xaxis=dict(
+                showgrid=False, 
+                zeroline=False, 
+                showticklabels=False,
+                range=x_range,
+                autorange=False
+            ),
+            yaxis=dict(
+                showgrid=False, 
+                zeroline=False, 
+                showticklabels=False,
+                range=y_range,
+                autorange=False,
+                scaleanchor="x",
+                scaleratio=1
+            ),
             plot_bgcolor='white'
         )
         

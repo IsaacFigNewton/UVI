@@ -29,6 +29,7 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
         """
         super().__init__(G, hierarchy, title)
         self.selected_node = None
+        self.annotation = None
         self.node_positions = None
         self.ax = None
         self.fig = None
@@ -169,7 +170,7 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
     
     def create_interactive_plot(self):
         """Create an interactive matplotlib plot with hover and click functionality."""
-        self.fig, self.ax = plt.subplots(figsize=(18, 14))
+        self.fig, self.ax = plt.subplots(figsize=(14, 10))
         
         # Create layout - use spring layout with adjustments for clarity
         self.node_positions = self.create_dag_layout()
@@ -201,10 +202,7 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
         self.fig.canvas.mpl_connect('motion_notify_event', self._on_hover)
         self.fig.canvas.mpl_connect('button_press_event', self._on_click)
         
-        # Add save button
-        save_ax = plt.axes([0.85, 0.95, 0.1, 0.04])
-        save_btn = Button(save_ax, 'Save PNG')
-        save_btn.on_clicked(self._save_png)
+        # save button removed - use matplotlib toolbar for saving
         
         plt.tight_layout()
         return self.fig
@@ -318,11 +316,16 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
             else:
                 label_pos[node] = (x, y)
         
-        # Format labels (remove corpus prefix for display)
+        # Format labels (remove corpus prefix for display, use full synset names for WordNet)
         labels = {}
         for node in self.G.nodes():
             if ':' in node:
-                labels[node] = node.split(':', 1)[1]
+                corpus, name = node.split(':', 1)
+                if corpus == 'WN':
+                    # For WordNet nodes, try to get full synset name
+                    labels[node] = self._get_full_wordnet_label(node, name)
+                else:
+                    labels[node] = name
             else:
                 labels[node] = node
         
@@ -334,23 +337,14 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
     
     def _add_corpus_labels(self):
         """Add corpus section labels to the visualization."""
-        # Add text annotations to indicate corpus regions
-        corpus_regions = {
-            'VerbNet': '#4A90E2',
-            'FrameNet': '#7B68EE',
-            'WordNet': '#50C878'
-        }
-        
-        y_offset = 0.95
-        for corpus, color in corpus_regions.items():
-            self.fig.text(0.02, y_offset, corpus, 
-                         fontsize=12, fontweight='bold', 
-                         color=color, va='top')
-            y_offset -= 0.03
+        # Corpus labels removed to prevent legend overflow
+        # Color information is now conveyed through node shapes and legend
+        pass
     
     def _on_hover(self, event):
         """Handle mouse hover events to show node information."""
         if event.inaxes != self.ax:
+            self.hide_tooltip()
             return
         
         # Find closest node to mouse position
@@ -363,16 +357,40 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
                 min_dist = dist
                 closest_node = node
         
-        # Update annotation
+        # Update tooltip without changing title
         if closest_node:
-            info = self.get_node_info(closest_node)
-            # Show as tooltip (simplified for matplotlib)
-            self.ax.set_title(f"{self.title}\n{info[:200]}...", fontsize=10)
+            self.show_tooltip(event.xdata, event.ydata, closest_node)
         else:
-            self.ax.set_title(f"{self.title}\n(VerbNet-FrameNet-WordNet Integration)", 
-                            fontsize=16, fontweight='bold')
+            self.hide_tooltip()
+    
+    def show_tooltip(self, x, y, node):
+        """Show tooltip with node information."""
+        if self.annotation:
+            self.annotation.remove()
         
+        info = self.get_node_info(node)
+        self.annotation = self.ax.annotate(
+            info,
+            xy=(x, y),
+            xytext=(20, 20), 
+            textcoords='offset points',
+            bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.8),
+            arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'),
+            fontsize=9,
+            wrap=True
+        )
         self.fig.canvas.draw_idle()
+    
+    def hide_tooltip(self):
+        """Hide tooltip."""
+        if hasattr(self, 'annotation') and self.annotation:
+            try:
+                self.annotation.remove()
+            except:
+                pass
+            finally:
+                self.annotation = None
+            self.fig.canvas.draw_idle()
     
     def _on_click(self, event):
         """Handle mouse click events to select nodes."""
@@ -398,8 +416,35 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
             # Highlight selected node and its connections
             self._highlight_node(clicked_node)
     
+    def _get_node_shape(self, node):
+        """Get the appropriate shape for a node based on its corpus."""
+        if node.startswith('VN:'):
+            return 's'  # Square for VerbNet
+        elif node.startswith('FN:'):
+            return '^'  # Triangle for FrameNet
+        elif node.startswith('WN:'):
+            return 'd'  # Diamond for WordNet
+        else:
+            return 'o'  # Circle for verbs/other nodes
+    
+    def _get_full_wordnet_label(self, node, short_name):
+        """Get full synset name for WordNet nodes."""
+        if node not in self.hierarchy:
+            return short_name
+            
+        data = self.hierarchy[node]
+        synset_info = data.get('synset_info', {})
+        synset_id = synset_info.get('synset_id', '')
+        
+        # If we have a synset ID, use it as the full label
+        if synset_id and synset_id != 'Unknown':
+            return synset_id
+        else:
+            # Fallback to short name
+            return short_name
+    
     def _highlight_node(self, node):
-        """Highlight a selected node and its connections."""
+        """Highlight a selected node and its connections while preserving shapes."""
         # Clear and redraw with highlighting
         self.ax.clear()
         
@@ -408,24 +453,36 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
         successors = set(self.G.successors(node))
         connected = predecessors | successors | {node}
         
-        # Draw non-connected nodes with lower alpha
+        # Draw non-connected nodes with lower alpha, preserving shapes
         unconnected = set(self.G.nodes()) - connected
         if unconnected:
-            nx.draw_networkx_nodes(self.G, self.node_positions,
-                                 nodelist=list(unconnected),
-                                 node_color='lightgray',
-                                 node_size=1000,
-                                 alpha=0.3,
-                                 ax=self.ax)
+            # Group by shape to draw efficiently
+            shape_groups = {}
+            for n in unconnected:
+                shape = self._get_node_shape(n)
+                if shape not in shape_groups:
+                    shape_groups[shape] = []
+                shape_groups[shape].append(n)
+            
+            for shape, nodes in shape_groups.items():
+                nx.draw_networkx_nodes(self.G, self.node_positions,
+                                     nodelist=nodes,
+                                     node_color='lightgray',
+                                     node_size=1000,
+                                     node_shape=shape,
+                                     alpha=0.3,
+                                     ax=self.ax)
         
-        # Draw connected nodes with original colors
+        # Draw connected nodes with original colors and shapes
         for n in connected:
             color = self.get_dag_node_color(n)
             size = 3500 if n == node else 2000
+            shape = self._get_node_shape(n)
             nx.draw_networkx_nodes(self.G, self.node_positions,
                                  nodelist=[n],
                                  node_color=color,
                                  node_size=size,
+                                 node_shape=shape,
                                  alpha=1.0,
                                  ax=self.ax)
         
@@ -449,11 +506,15 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
                                      arrows=True,
                                      ax=self.ax)
         
-        # Draw labels
+        # Draw labels with full synset names for WordNet
         labels = {}
         for n in self.G.nodes():
             if ':' in n:
-                labels[n] = n.split(':', 1)[1]
+                corpus, name = n.split(':', 1)
+                if corpus == 'WN':
+                    labels[n] = self._get_full_wordnet_label(n, name)
+                else:
+                    labels[n] = name
             else:
                 labels[n] = n
         
@@ -473,8 +534,3 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
         
         self.fig.canvas.draw_idle()
     
-    def _save_png(self, event):
-        """Save the current visualization as a PNG file."""
-        filename = "integrated_vn_fn_wn_graph.png"
-        self.fig.savefig(filename, dpi=150, bbox_inches='tight')
-        print(f"Saved visualization to {filename}")
