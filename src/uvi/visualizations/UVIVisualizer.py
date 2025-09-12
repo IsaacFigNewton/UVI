@@ -1,9 +1,9 @@
 """
-VerbNet-FrameNet-WordNet Integrated Visualizer.
+UVI (Unified Verb Index) Visualizer.
 
-This module contains the VerbNetFrameNetWordNetVisualizer class for creating
+This module contains the UVIVisualizer class for creating
 interactive visualizations of integrated semantic graphs that link VerbNet,
-FrameNet, and WordNet corpora.
+FrameNet, WordNet, and PropBank corpora.
 """
 
 import matplotlib.pyplot as plt
@@ -12,11 +12,11 @@ from matplotlib.widgets import Button
 import networkx as nx
 from typing import Dict, Any, Optional
 
-from .Visualizer import Visualizer
+from .InteractiveVisualizer import InteractiveVisualizer
 
 
-class VerbNetFrameNetWordNetVisualizer(Visualizer):
-    """Specialized visualizer for integrated VerbNet-FrameNet-WordNet graphs."""
+class UVIVisualizer(InteractiveVisualizer):
+    """Unified Verb Index (UVI) visualizer for integrated VerbNet-FrameNet-WordNet-PropBank graphs."""
     
     def __init__(self, G, hierarchy, title="Integrated Semantic Graph"):
         """
@@ -43,6 +43,20 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
             return '#7B68EE'  # Purple for FrameNet
         elif node.startswith('WN:'):
             return '#50C878'  # Green for WordNet
+        elif node.startswith('PB:'):
+            # PropBank nodes - check node type for specific colors
+            node_data = self.G.nodes.get(node, {})
+            node_type = node_data.get('node_type', 'predicate')
+            if node_type == 'role':
+                return '#F08080'  # Light coral for semantic roles
+            elif node_type == 'roleset':
+                return '#ADD8E6'  # Light blue for rolesets
+            elif node_type == 'example':
+                return '#90EE90'  # Light green for examples
+            elif node_type == 'alias':
+                return '#FFFFE0'  # Light yellow for aliases
+            else:
+                return '#B0C4DE'  # Light steel blue for predicates
         elif node.startswith('VERB:'):
             return '#FFB84D'  # Orange for member verbs
         else:
@@ -133,7 +147,76 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
                 info.append(f"VerbNet Class: {vn_class}")
         
         else:
-            return super().get_node_info(node)
+            # Check for PropBank nodes by prefix
+            if node.startswith('PB:'):
+                predicate_info = data.get('predicate_info', {})
+                pb_node_type = predicate_info.get('node_type', 'predicate')
+                
+                if pb_node_type == 'role':
+                    info = [f"PropBank Role: {predicate_info.get('name', node)}"]
+                    info.append(f"Predicate: {predicate_info.get('predicate', 'Unknown')}")
+                    info.append(f"Role Number: {predicate_info.get('role_number', 'Unknown')}")
+                    info.append(f"Function: {predicate_info.get('function', 'Unknown')}")
+                    
+                    description = predicate_info.get('description', '')
+                    if description and len(description.strip()) > 0:
+                        if len(description) > 100:
+                            description = description[:97] + "..."
+                        info.append(f"Description: {description}")
+                        
+                    vnroles = predicate_info.get('vnroles', [])
+                    if vnroles:
+                        if len(vnroles) <= 3:
+                            info.append(f"VN Classes: {', '.join(vnroles)}")
+                        else:
+                            info.append(f"VN Classes: {len(vnroles)} classes")
+                            
+                elif pb_node_type == 'roleset':
+                    info = [f"PropBank Roleset: {predicate_info.get('name', node)}"]
+                    info.append(f"ID: {predicate_info.get('id', 'Unknown')}")
+                    info.append(f"Predicate: {predicate_info.get('predicate', 'Unknown')}")
+                    
+                    roles = predicate_info.get('roles', [])
+                    if roles:
+                        info.append(f"Roles: {len(roles)} semantic roles")
+                    
+                    examples = predicate_info.get('examples', [])
+                    if examples:
+                        info.append(f"Examples: {len(examples)} annotated examples")
+                    
+                    note = predicate_info.get('note', '')
+                    if note and len(note.strip()) > 0:
+                        if len(note) > 80:
+                            note = note[:77] + "..."
+                        info.append(f"Note: {note}")
+                        
+                elif pb_node_type == 'example':
+                    info = [f"PropBank Example: {predicate_info.get('name', node)}"]
+                    info.append(f"Roleset: {predicate_info.get('roleset', 'Unknown')}")
+                    
+                    text = predicate_info.get('text', '')
+                    if text and len(text.strip()) > 0:
+                        if len(text) > 120:
+                            text = text[:117] + "..."
+                        info.append(f"Text: {text}")
+                    
+                    arguments = predicate_info.get('arguments', [])
+                    if arguments:
+                        info.append(f"Arguments: {len(arguments)} marked arguments")
+                        
+                elif pb_node_type == 'alias':
+                    info = [f"PropBank Alias: {predicate_info.get('name', node)}"]
+                    info.append(f"Predicate: {predicate_info.get('predicate', 'Unknown')}")
+                    info.append(f"Type: {predicate_info.get('pos', 'Unknown')}")
+                    
+                else:
+                    # PropBank predicate node
+                    info = [f"PropBank Predicate: {node}"]
+                    lemma = predicate_info.get('lemma', '')
+                    if lemma and lemma != node:
+                        info.append(f"Lemma: {lemma}")
+            else:
+                return super().get_node_info(node)
         
         # Add connection information
         parents = data.get('parents', [])
@@ -159,6 +242,11 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
             mpatches.Patch(facecolor='#4A90E2', label='VerbNet Classes'),
             mpatches.Patch(facecolor='#7B68EE', label='FrameNet Frames'),
             mpatches.Patch(facecolor='#50C878', label='WordNet Synsets'),
+            mpatches.Patch(facecolor='#B0C4DE', label='PropBank Predicates'),
+            mpatches.Patch(facecolor='#ADD8E6', label='PropBank Rolesets'),
+            mpatches.Patch(facecolor='#F08080', label='PropBank Roles'),
+            mpatches.Patch(facecolor='#90EE90', label='PropBank Examples'),
+            mpatches.Patch(facecolor='#FFFFE0', label='PropBank Aliases'),
             mpatches.Patch(facecolor='#FFB84D', label='Member Verbs'),
             mpatches.Patch(facecolor='lightgray', label='Other Nodes')
         ]
@@ -213,9 +301,10 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
         vn_nodes = [n for n in self.G.nodes() if n.startswith('VN:')]
         fn_nodes = [n for n in self.G.nodes() if n.startswith('FN:')]
         wn_nodes = [n for n in self.G.nodes() if n.startswith('WN:')]
+        pb_nodes = [n for n in self.G.nodes() if n.startswith('PB:')]
         verb_nodes = [n for n in self.G.nodes() if n.startswith('VERB:')]
         other_nodes = [n for n in self.G.nodes() 
-                      if not any(n.startswith(p) for p in ['VN:', 'FN:', 'WN:', 'VERB:'])]
+                      if not any(n.startswith(p) for p in ['VN:', 'FN:', 'WN:', 'PB:', 'VERB:'])]
         
         # Draw nodes by corpus with different styles
         if vn_nodes:
@@ -244,6 +333,69 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
                                  node_shape='d',  # Diamond for WordNet
                                  alpha=0.9,
                                  ax=self.ax)
+        
+        if pb_nodes:
+            # Group PropBank nodes by type for different styling
+            pb_predicates = [n for n in pb_nodes if self.G.nodes.get(n, {}).get('node_type', 'predicate') == 'predicate']
+            pb_rolesets = [n for n in pb_nodes if self.G.nodes.get(n, {}).get('node_type', 'predicate') == 'roleset']
+            pb_roles = [n for n in pb_nodes if self.G.nodes.get(n, {}).get('node_type', 'predicate') == 'role']
+            pb_examples = [n for n in pb_nodes if self.G.nodes.get(n, {}).get('node_type', 'predicate') == 'example']
+            pb_aliases = [n for n in pb_nodes if self.G.nodes.get(n, {}).get('node_type', 'predicate') == 'alias']
+            pb_other = [n for n in pb_nodes if n not in pb_predicates + pb_rolesets + pb_roles + pb_examples + pb_aliases]
+            
+            if pb_predicates:
+                nx.draw_networkx_nodes(self.G, self.node_positions,
+                                     nodelist=pb_predicates,
+                                     node_color='#B0C4DE',
+                                     node_size=2800,
+                                     node_shape='h',  # Hexagon for PropBank predicates
+                                     alpha=0.9,
+                                     ax=self.ax)
+            
+            if pb_rolesets:
+                nx.draw_networkx_nodes(self.G, self.node_positions,
+                                     nodelist=pb_rolesets,
+                                     node_color='#ADD8E6',
+                                     node_size=2300,
+                                     node_shape='p',  # Pentagon for PropBank rolesets
+                                     alpha=0.9,
+                                     ax=self.ax)
+            
+            if pb_roles:
+                nx.draw_networkx_nodes(self.G, self.node_positions,
+                                     nodelist=pb_roles,
+                                     node_color='#F08080',
+                                     node_size=2000,
+                                     node_shape='v',  # Triangle down for PropBank roles
+                                     alpha=0.9,
+                                     ax=self.ax)
+            
+            if pb_examples:
+                nx.draw_networkx_nodes(self.G, self.node_positions,
+                                     nodelist=pb_examples,
+                                     node_color='#90EE90',
+                                     node_size=1800,
+                                     node_shape='<',  # Triangle left for PropBank examples
+                                     alpha=0.9,
+                                     ax=self.ax)
+            
+            if pb_aliases:
+                nx.draw_networkx_nodes(self.G, self.node_positions,
+                                     nodelist=pb_aliases,
+                                     node_color='#FFFFE0',
+                                     node_size=1600,
+                                     node_shape='>',  # Triangle right for PropBank aliases
+                                     alpha=0.9,
+                                     ax=self.ax)
+            
+            if pb_other:
+                nx.draw_networkx_nodes(self.G, self.node_positions,
+                                     nodelist=pb_other,
+                                     node_color='#B0C4DE',
+                                     node_size=2000,
+                                     node_shape='h',  # Default to hexagon
+                                     alpha=0.9,
+                                     ax=self.ax)
         
         if verb_nodes:
             nx.draw_networkx_nodes(self.G, self.node_positions,
@@ -400,6 +552,20 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
             return '^'  # Triangle for FrameNet
         elif node.startswith('WN:'):
             return 'd'  # Diamond for WordNet
+        elif node.startswith('PB:'):
+            # PropBank nodes - different shapes by type
+            node_data = self.G.nodes.get(node, {})
+            node_type = node_data.get('node_type', 'predicate')
+            if node_type == 'roleset':
+                return 'p'  # Pentagon for rolesets
+            elif node_type == 'role':
+                return 'v'  # Triangle down for roles
+            elif node_type == 'example':
+                return '<'  # Triangle left for examples
+            elif node_type == 'alias':
+                return '>'  # Triangle right for aliases
+            else:
+                return 'h'  # Hexagon for predicates
         else:
             return 'o'  # Circle for verbs/other nodes
     
