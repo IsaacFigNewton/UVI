@@ -363,34 +363,10 @@ class VerbNetFrameNetWordNetVisualizer(Visualizer):
         else:
             self.hide_tooltip()
     
-    def show_tooltip(self, x, y, node):
-        """Show tooltip with node information."""
-        if self.annotation:
-            self.annotation.remove()
-        
-        info = self.get_node_info(node)
-        self.annotation = self.ax.annotate(
-            info,
-            xy=(x, y),
-            xytext=(20, 20), 
-            textcoords='offset points',
-            bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.8),
-            arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'),
-            fontsize=9,
-            wrap=True
-        )
-        self.fig.canvas.draw_idle()
+    def _get_visualizer_type(self):
+        """Return visualizer type for configuration purposes."""
+        return 'combined'
     
-    def hide_tooltip(self):
-        """Hide tooltip."""
-        if hasattr(self, 'annotation') and self.annotation:
-            try:
-                self.annotation.remove()
-            except:
-                pass
-            finally:
-                self.annotation = None
-            self.fig.canvas.draw_idle()
     
     def _on_click(self, event):
         """Handle mouse click events to select nodes."""

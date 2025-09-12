@@ -75,82 +75,16 @@ class WordNetVisualizer(InteractiveVisualizer):
         print(self.get_node_info(node))
         print("=" * 40)
         
-        # Use advanced highlighting instead of basic redraw
-        self._highlight_node(node)
+        # Use consolidated highlighting from base class
+        self._highlight_connected_nodes(node)
     
-    def _highlight_node(self, node):
-        """Highlight a selected node and grey out non-neighboring nodes."""
-        import networkx as nx
-        
-        # Clear and redraw with highlighting
-        self.ax.clear()
-        
-        # Get connected nodes
-        predecessors = set(self.G.predecessors(node))
-        successors = set(self.G.successors(node))
-        connected = predecessors | successors | {node}
-        
-        # Draw non-connected nodes with lower alpha (greyed out)
-        unconnected = set(self.G.nodes()) - connected
-        if unconnected:
-            nx.draw_networkx_nodes(self.G, self.pos,
-                                 nodelist=list(unconnected),
-                                 node_color='lightgray',
-                                 node_size=1000,
-                                 alpha=0.3,
-                                 ax=self.ax)
-        
-        # Draw connected nodes with original colors
-        for n in connected:
-            color = self.get_dag_node_color(n)
-            size = 3500 if n == node else 2000
-            nx.draw_networkx_nodes(self.G, self.pos,
-                                 nodelist=[n],
-                                 node_color=color,
-                                 node_size=size,
-                                 alpha=1.0,
-                                 ax=self.ax)
-        
-        # Draw edges
-        for edge in self.G.edges():
-            if edge[0] in connected and edge[1] in connected:
-                nx.draw_networkx_edges(self.G, self.pos,
-                                     edgelist=[edge],
-                                     edge_color='red' if node in edge else 'black',
-                                     width=3 if node in edge else 1.5,
-                                     alpha=0.8,
-                                     arrows=True,
-                                     arrowsize=20,
-                                     ax=self.ax)
-            else:
-                nx.draw_networkx_edges(self.G, self.pos,
-                                     edgelist=[edge],
-                                     edge_color='lightgray',
-                                     width=0.5,
-                                     alpha=0.2,
-                                     arrows=True,
-                                     ax=self.ax)
-        
-        # Draw labels with full synset names
-        labels = {}
-        for n in self.G.nodes():
-            labels[n] = self._get_full_node_label(n)
-        
-        nx.draw_networkx_labels(self.G, self.pos,
-                              labels=labels,
-                              font_size=10 if n in connected else 6,
-                              font_weight='bold' if n == node else 'normal',
-                              ax=self.ax)
-        
-        self.ax.set_title(f"{self.title} - Selected: {node}", 
-                         fontsize=14, fontweight='bold')
-        self.ax.axis('off')
-        
-        # Re-add legend
-        legend_elements = self.create_dag_legend()
-        self.ax.legend(handles=legend_elements, loc='upper left', fontsize=10)
-        
-        self.fig.canvas.draw_idle()
+    def _format_node_label(self, node):
+        """Override to use full synset names for WordNet visualization."""
+        return self._get_full_node_label(node)
+    
+    def _get_visualizer_type(self):
+        """Return visualizer type for configuration purposes."""
+        return 'wordnet'
     
     def _get_full_node_label(self, node):
         """Get full synset name for node labels."""
@@ -168,45 +102,6 @@ class WordNetVisualizer(InteractiveVisualizer):
             # Fallback to node name
             return node
     
-    def draw_graph(self):
-        """Draw the graph with full synset names as labels."""
-        import networkx as nx
-        
-        self.ax.clear()
-        
-        # Create labels with full synset names
-        labels = {}
-        for node in self.G.nodes():
-            labels[node] = self._get_full_node_label(node)
-        
-        # Draw nodes with colors
-        node_colors = [self.get_node_color(node) for node in self.G.nodes()]
-        nx.draw_networkx_nodes(self.G, self.pos, 
-                              node_color=node_colors, 
-                              node_size=2000,
-                              ax=self.ax)
-        
-        # Draw edges
-        nx.draw_networkx_edges(self.G, self.pos, 
-                              edge_color='black', 
-                              width=1.5, 
-                              alpha=0.7,
-                              arrows=True,
-                              arrowsize=20,
-                              ax=self.ax)
-        
-        # Draw labels
-        nx.draw_networkx_labels(self.G, self.pos, 
-                               labels=labels,
-                               font_size=10,
-                               ax=self.ax)
-        
-        self.ax.set_title(self.title, fontsize=14, fontweight='bold')
-        self.ax.axis('off')
-        
-        # Add legend
-        legend_elements = self.create_dag_legend()
-        self.ax.legend(handles=legend_elements, loc='upper left', fontsize=10)
     
     def create_dag_legend(self):
         """Create legend for WordNet visualization."""

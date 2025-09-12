@@ -9,5 +9,16 @@ from .Visualizer import Visualizer
 from .InteractiveVisualizer import InteractiveVisualizer
 from .FrameNetVisualizer import FrameNetVisualizer
 from .WordNetVisualizer import WordNetVisualizer
+from .VerbNetVisualizer import VerbNetVisualizer
+from .VerbNetFrameNetWordNetVisualizer import VerbNetFrameNetWordNetVisualizer
+from .VisualizerConfig import VisualizerConfig
 
-__all__ = ['Visualizer', 'InteractiveVisualizer', 'FrameNetVisualizer', 'WordNetVisualizer']
+__all__ = [
+    'Visualizer', 
+    'InteractiveVisualizer', 
+    'FrameNetVisualizer', 
+    'WordNetVisualizer', 
+    'VerbNetVisualizer',
+    'VerbNetFrameNetWordNetVisualizer',
+    'VisualizerConfig'
+]
