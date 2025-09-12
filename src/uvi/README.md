@@ -5,10 +5,12 @@ A comprehensive standalone Python package providing integrated access to nine li
 ## Table of Contents
 
 - [Overview](#overview)
+- [Package Structure](#package-structure)
 - [Architecture](#architecture)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Core Features](#core-features)
+- [Module Documentation](#module-documentation)
 - [API Reference](#api-reference)
 - [Examples](#examples)
 - [Performance](#performance)
@@ -42,6 +44,74 @@ The UVI package implements universal interface patterns and shared semantic fram
 - **Multiple Export Formats**: JSON, XML, CSV export with filtering
 - **Performance Optimized**: Efficient parsing and caching strategies with 1,100+ lines of duplicate code eliminated
 - **Framework Independent**: Works in any Python environment
+
+## Package Structure
+
+The UVI package is organized into specialized modules, each with comprehensive documentation:
+
+```
+src/uvi/
+├── corpus_loader/           # Corpus loading and parsing system
+│   ├── CorpusLoader.py      # Main corpus loading orchestration
+│   ├── CorpusParser.py      # XML/file parsing for 9 corpus types
+│   ├── CorpusCollectionBuilder.py  # Reference collection building
+│   ├── CorpusCollectionValidator.py # Data validation and integrity
+│   ├── CorpusCollectionAnalyzer.py  # Analytics and statistics
+│   └── README.md            # 📋 Comprehensive module documentation
+├── graph/                   # Graph construction and visualization
+│   ├── GraphBuilder.py      # Base graph construction class
+│   ├── FrameNetGraphBuilder.py   # FrameNet graph specialization
+│   ├── PropBankGraphBuilder.py   # PropBank graph specialization
+│   ├── VerbNetGraphBuilder.py    # VerbNet graph specialization
+│   ├── WordNetGraphBuilder.py    # WordNet graph specialization
+│   └── README.md            # 📋 Graph construction documentation
+├── parsers/                 # Specialized corpus format parsers
+│   ├── BSO_Parser.py        # Broad Semantic Ontology parser
+│   ├── FrameNet_Parser.py   # FrameNet XML parser
+│   ├── OntoNotes_Parser.py  # OntoNotes sense inventory parser
+│   ├── PropBank_Parser.py   # PropBank frame parser
+│   ├── Reference_Parser.py  # Reference documentation parser
+│   ├── SemNet_Parser.py     # Semantic network parser
+│   ├── VerbNet_Parser.py    # VerbNet class parser
+│   ├── WordNet_Parser.py    # WordNet synset parser
+│   ├── VN_API_Parser.py     # Enhanced VerbNet API parser
+│   └── README.md            # 📋 Parser system documentation
+├── utils/                   # Core utilities and validation
+│   ├── SchemaValidator.py   # XML schema validation
+│   ├── CrossReferenceManager.py # Cross-corpus mapping management
+│   ├── CorpusFileManager.py # File system operations
+│   └── README.md            # 📋 Utilities documentation
+├── visualizations/          # Interactive visualization system
+│   ├── InteractiveVisualizer.py    # Base visualization class
+│   ├── FrameNetVisualizer.py       # FrameNet interactive graphs
+│   ├── PropBankVisualizer.py       # PropBank role visualization
+│   ├── VerbNetVisualizer.py        # VerbNet class hierarchies
+│   ├── WordNetVisualizer.py        # WordNet synset networks
+│   ├── UnifiedVisualizer.py        # Multi-corpus unified views
+│   ├── VisualizerConfig.py         # Configuration management
+│   └── README.md            # 📋 Visualization documentation
+├── UVI.py                   # Main unified interface
+├── Presentation.py          # Output formatting and display
+├── CorpusMonitor.py         # File system monitoring
+└── [8 Helper Classes]       # Modular architecture components
+```
+
+### Module Documentation Summary
+
+Each module contains comprehensive README.md documentation (1,868+ lines total):
+
+- **📋 corpus_loader/README.md** (272 lines) - Corpus loading, parsing, and validation system
+- **📋 graph/README.md** (320 lines) - Graph construction with specialized builders for each corpus
+- **📋 parsers/README.md** (427 lines) - 9 specialized parsers for different linguistic formats
+- **📋 utils/README.md** (356 lines) - Schema validation, cross-reference management, file operations
+- **📋 visualizations/README.md** (493 lines) - Interactive visualizations with corpus-specific implementations
+
+Each README includes:
+- Mermaid class hierarchy diagrams
+- Detailed API documentation
+- Practical usage examples
+- Integration guidelines for novice users
+- Performance considerations and best practices
 
 ## Architecture
 
@@ -230,14 +300,10 @@ The helper classes integrate with these core CorpusLoader components:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/UVI.git
-cd UVI
+git clone https://github.com/IsaacFigNewton/UVI.git
 
 # Install in development mode
-pip install -e .
-
-# Or install from setup.py
-python setup.py install
+pip install -e ./UVI
 ```
 
 ### Optional Dependencies
@@ -406,6 +472,69 @@ profile_export = uvi.export_semantic_profile('run', format='json')
 # Cross-corpus mappings
 mappings = uvi.export_cross_corpus_mappings()
 ```
+
+## Module Documentation
+
+The UVI package provides comprehensive documentation for each specialized module. These documents are designed to enable novice users to integrate the package based almost exclusively on the module documentation.
+
+### Core Modules
+
+#### 📋 [Corpus Loader](corpus_loader/README.md)
+Comprehensive corpus loading and parsing system supporting 9 linguistic corpora:
+- **CorpusLoader**: Main orchestration class with auto-detection capabilities
+- **CorpusParser**: XML/file parsing for VerbNet, FrameNet, PropBank, OntoNotes, WordNet, BSO, SemNet, Reference docs, and VN API
+- **CorpusCollectionBuilder**: Reference collection building and cross-corpus mapping
+- **CorpusCollectionValidator**: Data validation and integrity checking
+- **CorpusCollectionAnalyzer**: Analytics, statistics, and coverage analysis
+
+**Key Features**: Auto-detection of corpus formats, robust error handling, extensible parsing architecture, comprehensive validation
+
+#### 📋 [Graph Construction](graph/README.md)
+Specialized graph builders for creating semantic networks from linguistic corpora:
+- **GraphBuilder**: Base class with common graph construction patterns
+- **FrameNetGraphBuilder**: Frame-element relationships and semantic networks
+- **PropBankGraphBuilder**: Predicate-argument structure graphs
+- **VerbNetGraphBuilder**: Class hierarchy and thematic role networks
+- **WordNetGraphBuilder**: Synset relationships and lexical networks
+
+**Key Features**: Corpus-specific optimizations, hierarchical layouts, cross-corpus integration, performance-optimized construction
+
+#### 📋 [Format Parsers](parsers/README.md)
+Nine specialized parsers for different linguistic corpus formats:
+- **Multi-format Support**: XML, JSON, plain text, and custom formats
+- **Robust Error Handling**: Graceful degradation and detailed error reporting
+- **Data Standardization**: Consistent output structures across all parsers
+- **Extensible Architecture**: Easy addition of new corpus formats
+
+**Supported Formats**: VerbNet XML, FrameNet XML, PropBank frames, OntoNotes sense inventories, WordNet data files, BSO mappings, SemNet networks, Reference documentation, VN API enhancements
+
+#### 📋 [Utilities](utils/README.md)
+Core utilities for validation, cross-reference management, and file operations:
+- **SchemaValidator**: XML schema validation with detailed error reporting
+- **CrossReferenceManager**: Cross-corpus mapping and relationship discovery
+- **CorpusFileManager**: File system operations, path resolution, and monitoring
+
+**Key Features**: Comprehensive validation, efficient cross-corpus navigation, robust file handling, performance optimization
+
+#### 📋 [Visualizations](visualizations/README.md)
+Interactive visualization system with corpus-specific implementations:
+- **InteractiveVisualizer**: Base class with common visualization patterns
+- **Specialized Visualizers**: Corpus-specific implementations for FrameNet, PropBank, VerbNet, WordNet
+- **UnifiedVisualizer**: Multi-corpus integrated visualizations
+- **VisualizerConfig**: Configuration management and customization
+
+**Key Features**: Interactive web-based visualizations, hierarchical layouts, color-coded semantic relationships, batch processing capabilities
+
+### Integration Guidelines
+
+Each module's README provides:
+1. **Quick Start Examples** - Get started immediately with minimal code
+2. **Comprehensive API Reference** - Full documentation of all classes and methods
+3. **Best Practices** - Performance optimization and error handling
+4. **Extension Patterns** - How to extend functionality for custom use cases
+5. **Integration Examples** - Real-world usage scenarios
+
+The documentation is structured to be self-contained, allowing developers to work with individual modules or the complete integrated system based on their needs.
 
 ## API Reference
 
@@ -767,55 +896,3 @@ cd UVI
 pip install -e .
 pip install -r requirements-dev.txt  # Development dependencies
 ```
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Citation
-
-If you use the UVI package in your research, please cite:
-
-```bibtex
-@software{uvi_package,
-  title={UVI: Unified Verb Index Package},
-  author={Your Name},
-  year={2024},
-  url={https://github.com/yourusername/UVI}
-}
-```
-
-## Changelog
-
-### Version 2.0.0 (Current)
-- **Major Refactoring**: Modular architecture with 8 specialized helper classes
-- **CorpusLoader Integration**: Full integration with CorpusLoader components
-- **Code Optimization**: Eliminated 1,100+ lines of duplicate code
-- **Enhanced Functionality**: Improved search, validation, and analytics
-- **Backward Compatible**: Preserves all existing UVI public methods
-- Support for 9 linguistic corpora
-- Cross-corpus navigation and semantic analysis
-- Multiple export formats (JSON, XML, CSV)
-- Comprehensive test suite and documentation
-- Performance optimization and benchmarking tools
-
-### Version 1.0.0
-- Initial monolithic implementation with 126 methods
-
-### Planned Features
-- Additional corpus formats
-- Advanced semantic analysis algorithms  
-- REST API interface
-- GUI application
-- Integration with popular NLP libraries
-
-## Support
-
-- **Documentation**: This README and inline docstrings
-- **Examples**: Comprehensive examples in `examples/` directory
-- **Issues**: GitHub Issues for bug reports and feature requests
-- **Discussions**: GitHub Discussions for questions and community support
-
----
-
-For more information, see the [project repository](https://github.com/yourusername/UVI) and [documentation](https://uvi-package.readthedocs.io).
