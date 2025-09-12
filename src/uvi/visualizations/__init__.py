@@ -11,6 +11,7 @@ from .FrameNetVisualizer import FrameNetVisualizer
 from .WordNetVisualizer import WordNetVisualizer
 from .VerbNetVisualizer import VerbNetVisualizer
 from .VerbNetFrameNetWordNetVisualizer import VerbNetFrameNetWordNetVisualizer
+from .PropBankVisualizer import PropBankVisualizer
 from .VisualizerConfig import VisualizerConfig
 
 __all__ = [
@@ -20,5 +21,6 @@ __all__ = [
     'WordNetVisualizer', 
     'VerbNetVisualizer',
     'VerbNetFrameNetWordNetVisualizer',
+    'PropBankVisualizer',
     'VisualizerConfig'
 ]
