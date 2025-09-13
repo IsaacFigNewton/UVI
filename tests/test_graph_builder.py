@@ -14,7 +14,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
-from uvi.graph import GraphBuilder
+from uvi.graph.FrameNetGraphBuilder import FrameNetGraphBuilder as GraphBuilder
 
 
 class TestGraphBuilder(unittest.TestCase):
@@ -338,7 +338,7 @@ class TestGraphBuilder(unittest.TestCase):
             'C': {'depth': 2, 'frame_info': {'node_type': 'frame_element', 'core_type': 'Core', 'frame': 'A'}}
         }
         
-        self.builder._display_graph_statistics(G, hierarchy)
+        self.builder.display_graph_statistics(G, hierarchy)
         
         # Check that print was called with expected content
         mock_print.assert_called()
