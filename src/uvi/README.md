@@ -1,5 +1,7 @@
 # UVI (Unified Verb Index) Package
 
+## TODO: CLEAN UP DOCS
+
 A comprehensive standalone Python package providing integrated access to nine linguistic corpora with cross-resource navigation, semantic validation, and hierarchical analysis capabilities through a modular helper class architecture.
 
 ## Table of Contents
@@ -40,12 +42,10 @@ The UVI package implements universal interface patterns and shared semantic fram
 - **Semantic Analysis**: Complete semantic profiles across all corpora
 - **Data Validation**: Schema validation and integrity checking
 - **Multiple Export Formats**: JSON, XML, CSV export with filtering
-- **Performance Optimized**: Efficient parsing and caching strategies with 1,100+ lines of duplicate code eliminated
+- **Performance Optimized**: Efficient parsing and caching strategies
 - **Framework Independent**: Works in any Python environment
 
 ## Architecture
-
-### System Architecture Diagram
 
 ```mermaid
 graph TB
@@ -154,51 +154,45 @@ graph TB
 
 ```
 
-### Modular Helper Class System
+### Helper Classes
 
-The UVI package has been refactored from a monolithic design into a modular architecture using specialized helper classes that integrate with the CorpusLoader components:
-
-#### Helper Classes
-
-1. **SearchEngine** - Cross-corpus search with enhanced analytics
+1. **SearchEngine**
+   - Cross-corpus search
    - Integrates with `CorpusCollectionAnalyzer` for statistics
-   - Eliminates 45 lines of duplicate UVI statistics code
    - Handles lemma search, semantic patterns, and reference collection searching
 
-2. **CorpusRetriever** - VerbNet data retrieval with reference enrichment  
+2. **CorpusRetriever**
+   - VerbNet data retrieval with reference enrichment
    - Integrates with `CorpusParser` and `CorpusCollectionBuilder`
-   - Provides enhanced corpus data retrieval
    - Manages cross-corpus mapping discovery
 
-3. **CrossReferenceManager** - Cross-corpus navigation with validation
+4. **CrossReferenceManager**
+   - Cross-corpus navigation with validation
    - Integrates with `CorpusCollectionValidator`
-   - Eliminates 164 lines of duplicate cross-reference code
    - Handles semantic relationship discovery
 
-4. **ReferenceDataProvider** - Themrole and predicate references
+6. **ReferenceDataProvider**
+   - Themrole and predicate references
    - Integrates with `CorpusCollectionBuilder`
-   - Eliminates 167+ lines of duplicate collection building code
    - Manages verb-specific features and restrictions
 
-5. **ValidationManager** - Comprehensive corpus and XML validation
+7. **ValidationManager**
    - Integrates with `CorpusCollectionValidator` and `CorpusParser`
-   - Eliminates 297+ lines of duplicate validation code
    - Provides schema and reference collection validation
 
-6. **ExportManager** - Enhanced resource export capabilities
+8. **ExportManager**
    - Integrates with `CorpusCollectionAnalyzer`
-   - Provides comprehensive metadata and coverage analysis
    - Handles multiple export formats with filtering
 
-7. **AnalyticsManager** - Centralized analytics operations
+9. **AnalyticsManager**
+   - Centralized analytics operations
    - Integrates with `CorpusCollectionAnalyzer`
-   - Provides comprehensive analytics reporting
-   - Eliminates scattered statistics calculations
 
-8. **ParsingEngine** - Centralized parsing operations
+11. **ParsingEngine**
+   - Centralized parsing operations
    - Integrates with `CorpusParser`
    - Handles individual and batch corpus parsing
-   - Provides parsing statistics and error recovery
+   - Provides parsing statistics and error logging
 
 #### CorpusLoader Components
 
@@ -208,15 +202,6 @@ The helper classes integrate with these core CorpusLoader components:
 - **CorpusCollectionBuilder**: Builds reference collections and mappings
 - **CorpusCollectionValidator**: Provides validation capabilities
 - **CorpusCollectionAnalyzer**: Generates analytics and statistics
-
-### Architecture Benefits
-
-- **Separation of Concerns**: Each helper class handles specific functionality
-- **Code Reusability**: Eliminates 1,100+ lines of duplicate code
-- **Maintainability**: Modular design simplifies debugging and updates
-- **Extensibility**: New features can be added to specific helpers
-- **Performance**: Optimized delegation patterns and caching
-- **Backward Compatibility**: Preserves existing UVI public interface
 
 ## Installation
 
@@ -230,7 +215,7 @@ The helper classes integrate with these core CorpusLoader components:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/UVI.git
+git clone https://github.com/uvi/UVI.git
 cd UVI
 
 # Install in development mode
@@ -767,55 +752,3 @@ cd UVI
 pip install -e .
 pip install -r requirements-dev.txt  # Development dependencies
 ```
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Citation
-
-If you use the UVI package in your research, please cite:
-
-```bibtex
-@software{uvi_package,
-  title={UVI: Unified Verb Index Package},
-  author={Your Name},
-  year={2024},
-  url={https://github.com/yourusername/UVI}
-}
-```
-
-## Changelog
-
-### Version 2.0.0 (Current)
-- **Major Refactoring**: Modular architecture with 8 specialized helper classes
-- **CorpusLoader Integration**: Full integration with CorpusLoader components
-- **Code Optimization**: Eliminated 1,100+ lines of duplicate code
-- **Enhanced Functionality**: Improved search, validation, and analytics
-- **Backward Compatible**: Preserves all existing UVI public methods
-- Support for 9 linguistic corpora
-- Cross-corpus navigation and semantic analysis
-- Multiple export formats (JSON, XML, CSV)
-- Comprehensive test suite and documentation
-- Performance optimization and benchmarking tools
-
-### Version 1.0.0
-- Initial monolithic implementation with 126 methods
-
-### Planned Features
-- Additional corpus formats
-- Advanced semantic analysis algorithms  
-- REST API interface
-- GUI application
-- Integration with popular NLP libraries
-
-## Support
-
-- **Documentation**: This README and inline docstrings
-- **Examples**: Comprehensive examples in `examples/` directory
-- **Issues**: GitHub Issues for bug reports and feature requests
-- **Discussions**: GitHub Discussions for questions and community support
-
----
-
-For more information, see the [project repository](https://github.com/yourusername/UVI) and [documentation](https://uvi-package.readthedocs.io).
